@@ -1,11 +1,13 @@
 mod components;
 mod constants;
+mod display;
+mod gravity;
 mod map;
 mod player;
 mod resources;
 
 use bevy::prelude::*;
-use bevy_rapier2d::prelude::*;
+use gravity::GravityPlugin;
 use map::MapPlugin;
 use player::PlayerPlugin;
 use resources::{Materials, Tilesets, WinSize};
@@ -22,12 +24,10 @@ fn main() {
             ..Default::default()
         })
         .add_plugins(DefaultPlugins)
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        // .add_plugin(RapierRenderPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(MapPlugin)
+        .add_plugin(GravityPlugin)
         .add_startup_system(setup.system())
-        .add_system(display_events.system())
         .run();
 }
 
@@ -37,11 +37,7 @@ fn setup(
     mut windows: ResMut<Windows>,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    mut rapier_config: ResMut<RapierConfiguration>,
 ) {
-    // configure physics engine
-    rapier_config.scale = 16.0;
-
     // camera
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 
@@ -84,17 +80,4 @@ fn setup(
         w: window.width(),
         h: window.height(),
     });
-}
-
-fn display_events(
-    mut intersection_events: EventReader<IntersectionEvent>,
-    mut contact_events: EventReader<ContactEvent>,
-) {
-    for intersection_event in intersection_events.iter() {
-        println!("Received intersection event: {:?}", intersection_event);
-    }
-
-    for contact_event in contact_events.iter() {
-        println!("Received contact event: {:?}", contact_event);
-    }
 }

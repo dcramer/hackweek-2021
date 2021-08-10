@@ -3,9 +3,5 @@ name = "hackweek-2021"
 version = "0.1.0"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-bevy = "0.5" # make sure this is the latest version
-bevy_rapier2d = { version = "0.10.2", features = [ "simd-stable", "render" ] }
-rand = "0.8.4"
+bevy = "0.5"

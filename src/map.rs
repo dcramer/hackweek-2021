@@ -1,10 +1,10 @@
 use bevy::prelude::*;
-use bevy_rapier2d::prelude::*;
 use std::fmt;
 
 use crate::{
-    components::Tile,
-    constants::SPRITE_SCALE,
+    components::{Collider, Tile},
+    constants::{SPRITE_SCALE, TILE_SIZE},
+    display::normalize_pos,
     resources::{Materials, Tilesets, WinSize},
 };
 
@@ -18,8 +18,6 @@ enum TileType {
 impl fmt::Display for TileType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
-        // or, alternatively:
-        // fmt::Debug::fmt(self, f)
     }
 }
 
@@ -50,7 +48,6 @@ fn map_render(
         transform: Transform::from_scale(Vec3::new(scale_y, scale_y, 0.)),
         ..Default::default()
     });
-    ();
     let island_tile = 20;
     let left_tile = 44;
     let middle_tile = 45;
@@ -93,100 +90,92 @@ fn map_render(
                 (tilesets.forest.clone(), TextureAtlasSprite::new(tnum))
             }
         };
-        let pos = map.coords_to_pos(i as i32 % map.width, i as i32 / map.width);
+        let pos = normalize_pos(map.coords_to_pos(i as i32 % map.width, i as i32 / map.width));
         commands
             .spawn_bundle(SpriteSheetBundle {
                 texture_atlas,
                 sprite,
-                transform: Transform::from_scale(Vec3::new(SPRITE_SCALE, SPRITE_SCALE, 1.0)),
+                transform: Transform {
+                    translation: Vec3::new(pos.x, pos.y, 1.),
+                    scale: Vec3::new(SPRITE_SCALE, SPRITE_SCALE, 1.0),
+                    ..Default::default()
+                },
                 ..Default::default()
             })
             .insert(Tile)
-            .insert_bundle(ColliderBundle {
-                shape: ColliderShape::cuboid(SPRITE_SCALE / 2., SPRITE_SCALE / 2.),
-                position: Vec2::new(pos.x * SPRITE_SCALE, pos.y * SPRITE_SCALE).into(),
-                material: ColliderMaterial {
-                    restitution: 0.,
-                    friction: 0.,
-                    ..Default::default()
-                },
-                mass_properties: ColliderMassProps::Density(2.0),
-                ..Default::default()
-            })
-            .insert(ColliderPositionSync::Discrete)
-            .insert(ColliderDebugRender::with_id(1));
+            .insert(Collider::new(TILE_SIZE, TILE_SIZE));
     }
 
-    // draw bordering collider
-    // - left
-    commands
-        .spawn_bundle(ColliderBundle {
-            shape: ColliderShape::cuboid(2., map.height as f32 * SPRITE_SCALE),
-            position: Vec2::new(-(map.width as f32 + 2.) / 2. * SPRITE_SCALE, 0.).into(),
-            ..Default::default()
-        })
-        .insert_bundle(SpriteSheetBundle {
-            texture_atlas: tilesets.forest.clone(),
-            sprite: TextureAtlasSprite::new(40),
-            transform: Transform::from_scale(Vec3::new(1., (map.height) as f32 * SPRITE_SCALE, 1.)),
-            ..Default::default()
-        })
-        .insert(ColliderPositionSync::Discrete)
-        .insert(ColliderDebugRender::with_id(5));
+    // // draw bordering collider
+    // // - left
+    // commands
+    //     .spawn_bundle(ColliderBundle {
+    //         shape: ColliderShape::cuboid(2., map.height as f32 * SPRITE_SCALE),
+    //         position: Vec2::new(-(map.width as f32 + 2.) / 2. * SPRITE_SCALE, 0.).into(),
+    //         ..Default::default()
+    //     })
+    //     .insert_bundle(SpriteSheetBundle {
+    //         texture_atlas: tilesets.forest.clone(),
+    //         sprite: TextureAtlasSprite::new(40),
+    //         transform: Transform::from_scale(Vec3::new(1., (map.height) as f32 * SPRITE_SCALE, 1.)),
+    //         ..Default::default()
+    //     })
+    //     .insert(ColliderPositionSync::Discrete)
+    //     .insert(ColliderDebugRender::with_id(5));
 
-    // - right
-    commands
-        .spawn_bundle(ColliderBundle {
-            shape: ColliderShape::cuboid(1.0, (map.height) as f32 * SPRITE_SCALE),
-            position: Vec2::new((map.width as f32 + 2.) / 2. * SPRITE_SCALE, 0.).into(),
-            ..Default::default()
-        })
-        .insert_bundle(SpriteSheetBundle {
-            texture_atlas: tilesets.forest.clone(),
-            sprite: TextureAtlasSprite::new(40),
-            transform: Transform::from_scale(Vec3::new(1., (map.height) as f32 * SPRITE_SCALE, 1.)),
-            ..Default::default()
-        })
-        .insert(ColliderPositionSync::Discrete)
-        .insert(ColliderDebugRender::with_id(5));
-    // - top
-    commands
-        .spawn_bundle(ColliderBundle {
-            shape: ColliderShape::cuboid((map.width as f32 + 2.) * SPRITE_SCALE, 1.0),
-            position: Vec2::new(0., (map.height) as f32 / 2. * SPRITE_SCALE).into(),
-            ..Default::default()
-        })
-        .insert_bundle(SpriteSheetBundle {
-            texture_atlas: tilesets.forest.clone(),
-            sprite: TextureAtlasSprite::new(40),
-            transform: Transform::from_scale(Vec3::new(
-                (map.width as f32 + 3.) * SPRITE_SCALE,
-                1.,
-                1.,
-            )),
-            ..Default::default()
-        })
-        .insert(ColliderPositionSync::Discrete)
-        .insert(ColliderDebugRender::with_id(5));
-    // - bottom
-    commands
-        .spawn_bundle(ColliderBundle {
-            shape: ColliderShape::cuboid((map.width as f32 + 2.) * SPRITE_SCALE, 1.0),
-            position: Vec2::new(0., -(map.height) as f32 / 2. * SPRITE_SCALE).into(),
-            ..Default::default()
-        })
-        .insert_bundle(SpriteSheetBundle {
-            texture_atlas: tilesets.forest.clone(),
-            sprite: TextureAtlasSprite::new(40),
-            transform: Transform::from_scale(Vec3::new(
-                (map.width as f32 + 3.) * SPRITE_SCALE,
-                1.,
-                1.,
-            )),
-            ..Default::default()
-        })
-        .insert(ColliderPositionSync::Discrete)
-        .insert(ColliderDebugRender::with_id(5));
+    // // - right
+    // commands
+    //     .spawn_bundle(ColliderBundle {
+    //         shape: ColliderShape::cuboid(1.0, (map.height) as f32 * SPRITE_SCALE),
+    //         position: Vec2::new((map.width as f32 + 2.) / 2. * SPRITE_SCALE, 0.).into(),
+    //         ..Default::default()
+    //     })
+    //     .insert_bundle(SpriteSheetBundle {
+    //         texture_atlas: tilesets.forest.clone(),
+    //         sprite: TextureAtlasSprite::new(40),
+    //         transform: Transform::from_scale(Vec3::new(1., (map.height) as f32 * SPRITE_SCALE, 1.)),
+    //         ..Default::default()
+    //     })
+    //     .insert(ColliderPositionSync::Discrete)
+    //     .insert(ColliderDebugRender::with_id(5));
+    // // - top
+    // commands
+    //     .spawn_bundle(ColliderBundle {
+    //         shape: ColliderShape::cuboid((map.width as f32 + 2.) * SPRITE_SCALE, 1.0),
+    //         position: Vec2::new(0., (map.height) as f32 / 2. * SPRITE_SCALE).into(),
+    //         ..Default::default()
+    //     })
+    //     .insert_bundle(SpriteSheetBundle {
+    //         texture_atlas: tilesets.forest.clone(),
+    //         sprite: TextureAtlasSprite::new(40),
+    //         transform: Transform::from_scale(Vec3::new(
+    //             (map.width as f32 + 3.) * SPRITE_SCALE,
+    //             1.,
+    //             1.,
+    //         )),
+    //         ..Default::default()
+    //     })
+    //     .insert(ColliderPositionSync::Discrete)
+    //     .insert(ColliderDebugRender::with_id(5));
+    // // - bottom
+    // commands
+    //     .spawn_bundle(ColliderBundle {
+    //         shape: ColliderShape::cuboid((map.width as f32 + 2.) * SPRITE_SCALE, 1.0),
+    //         position: Vec2::new(0., -(map.height) as f32 / 2. * SPRITE_SCALE).into(),
+    //         ..Default::default()
+    //     })
+    //     .insert_bundle(SpriteSheetBundle {
+    //         texture_atlas: tilesets.forest.clone(),
+    //         sprite: TextureAtlasSprite::new(40),
+    //         transform: Transform::from_scale(Vec3::new(
+    //             (map.width as f32 + 3.) * SPRITE_SCALE,
+    //             1.,
+    //             1.,
+    //         )),
+    //         ..Default::default()
+    //     })
+    //     .insert(ColliderPositionSync::Discrete)
+    //     .insert(ColliderDebugRender::with_id(5));
 }
 
 pub struct Map {
@@ -222,9 +211,9 @@ impl Map {
 const DFEAULT_MAP: (&str, i32, i32) = (
     "
 --------------------------------
---------------------------------
+------X-------------------------
 -----#####----------------------
------X----------------X---------
+----------------------X---------
 --##############-----###--------
 --##############----------#-----
 ----------------------X---#-----
