@@ -5,9 +5,9 @@ use crate::{
         Direction, Gravity, Movable, Player, PlayerReadyAttack, PlayerState, Projectile, Speed,
         Velocity,
     },
-    constants::{GRAVITY, MAX_FALLING_SPEED, SPRITE_SCALE, TIME_STEP},
+    constants::{GRAVITY, MAX_FALLING_SPEED, PLATFORM_THRESHOLD, SPRITE_SCALE, TIME_STEP},
     map::Map,
-    resources::{Materials, WinSize},
+    resources::{CharacterAnimation, Materials, WinSize},
 };
 
 pub struct PlayerPlugin;
@@ -24,25 +24,25 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn player_spawn(mut commands: Commands, materials: Res<Materials>, map: Res<Map>) {
+fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map: Res<Map>) {
     let spawn_pos = map.starting_positions[0];
     let transform = Transform {
         translation: Vec3::new(spawn_pos.x, spawn_pos.y, 10.),
-        // scale: Vec3::new(SPRITE_SCALE * 0.57, SPRITE_SCALE * 0.57, 1.0),
+        scale: Vec3::new(2., 2., 1.),
         ..Default::default()
     };
 
     println!("Spawning player at {}, {}", spawn_pos.x, spawn_pos.y);
     commands
         .spawn_bundle(SpriteBundle {
-            material: materials.player.clone(),
+            material: char_anim.idle_f0.clone(),
             // current sprite is 16x28
             transform,
             ..Default::default()
         })
         .insert(Player::default())
         .insert(PlayerReadyAttack(true))
-        .insert(Movable::from_transform(transform, 16., 28.))
+        .insert(Movable::from_transform(transform, 32., 32.))
         .insert(Speed::new(240.0, 0.0));
 
     // spawn with default weapon
@@ -57,6 +57,23 @@ fn player_spawn(mut commands: Commands, materials: Res<Materials>, map: Res<Map>
     //         ..Default::default()
     //     })
     //     .insert(Weapon);
+}
+
+fn player_animation(
+    char_anim: Res<CharacterAnimation>,
+    mut query: Query<(&mut Timer, &Player, &mut Sprite, With<Player>)>,
+) {
+    //     for (mut timer, player, mut material, _) in query.iter_mut() {
+    //         timer.tick(time.delta());
+    //         if timer.finished() {
+    //             if player.state == PlayerState::Stand {
+    //                 material.texture = char_anim.idle_f0.clone();
+    //             } else {
+    //                 material.texture = char_anim.run_f0.clone();
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 fn player_movement(
@@ -84,6 +101,10 @@ fn player_movement(
                 } else if kb.pressed(KeyCode::Space) {
                     movable.speed.y = player.jump_speed;
                     player.state = PlayerState::Jump;
+                } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
+                    if movable.on_platform {
+                        movable.position.y -= PLATFORM_THRESHOLD;
+                    }
                 }
             }
             PlayerState::Walk => {
@@ -109,6 +130,10 @@ fn player_movement(
                         movable.speed.x = -speed.0.x;
                     }
                     movable.scale.x = -movable.scale.x.abs();
+                } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
+                    if movable.on_platform {
+                        movable.position.y -= PLATFORM_THRESHOLD;
+                    }
                 }
                 // if theres no tile to walk on, fall
                 if kb.pressed(KeyCode::Space) {

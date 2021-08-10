@@ -4,6 +4,7 @@ use bevy::sprite::collide_aabb::collide;
 use bevy::{core::FixedTimestep, prelude::*};
 
 use crate::components::AABB;
+use crate::constants::PLATFORM_THRESHOLD;
 use crate::{
     components::{Direction, Movable},
     map::Map,
@@ -33,6 +34,7 @@ fn physics(mut query: Query<(&mut Transform, &mut Movable)>, map: Res<Map>, time
         movable.position.x += movable.speed.x * time.delta_seconds();
         movable.position.y += movable.speed.y * time.delta_seconds();
 
+        let mut on_platform = false;
         let mut ground_y = 0.;
         if movable.speed.y <= 0.0
             && has_ground(
@@ -43,6 +45,7 @@ fn physics(mut query: Query<(&mut Transform, &mut Movable)>, map: Res<Map>, time
                 &movable.position,
                 &movable.speed,
                 &mut ground_y,
+                &mut on_platform,
             )
         {
             // if movable.position.y <= 0.0 {
@@ -53,6 +56,7 @@ fn physics(mut query: Query<(&mut Transform, &mut Movable)>, map: Res<Map>, time
         } else {
             movable.on_ground = false;
         }
+        movable.on_platform = on_platform;
         movable.aabb.center.x = movable.position.x + movable.aabb_offset.x;
         movable.aabb.center.y = movable.position.y + movable.aabb_offset.y;
 
@@ -74,6 +78,7 @@ pub fn has_ground(
     position: &Vec3,
     speed: &Vec3,
     ground_y: &mut f32,
+    on_platform: &mut bool,
 ) -> bool {
     // find the center of our current object
     let old_center = Vec2::new(
@@ -110,16 +115,30 @@ pub fn has_ground(
         );
         let bottom_right = Vec2::new(bottom_left.x + aabb.half_size.x * 2. - 2., bottom_left.y);
 
-        let mut checked_tile_x: i32 = bottom_left.x as i32;
+        let mut checked_tile_x = bottom_left.x as i32;
         // check tiles "below" us (in case we're overlapping two tiles)
-        while checked_tile_x < bottom_right.x as i32 {
+        while checked_tile_x < bottom_right.x as i32 + map.tile_size {
             tile_x = map.tile_x_at_point(checked_tile_x as f32);
             tile_y = map.tile_y_at_point(bottom_left.y);
 
             *ground_y = (tile_y * map.tile_size) as f32 + map.tile_size as f32 + map.position.y;
 
             if map.is_obstacle(tile_x, tile_y) {
+                *on_platform = false;
                 return true;
+            } else if map.is_platform(tile_x, tile_y)
+                && (bottom_left.y - *ground_y).abs()
+                    <= PLATFORM_THRESHOLD + old_position.y - position.y
+            {
+                *on_platform = true;
+            }
+
+            println!("{}, {}", checked_tile_x, bottom_right.x);
+            if checked_tile_x as f32 >= bottom_right.x {
+                if *on_platform {
+                    return true;
+                }
+                break;
             }
 
             checked_tile_x += map.tile_size;

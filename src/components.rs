@@ -64,6 +64,8 @@ pub struct Movable {
     pub at_ceiling: bool,
     pub was_at_ceiling: bool,
 
+    pub on_platform: bool,
+
     pub pushes_right_tile: bool,
     pub pushed_right_tile: bool,
     pub pushes_left_tile: bool,
@@ -84,6 +86,7 @@ impl Default for Movable {
             was_on_ground: false,
             at_ceiling: false,
             was_at_ceiling: false,
+            on_platform: false,
             pushes_right_tile: false,
             pushed_right_tile: false,
             pushes_left_tile: false,

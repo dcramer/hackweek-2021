@@ -9,6 +9,7 @@ use crate::{
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TileType {
     Empty,
+    Platform,
     Solid,
     Spike,
 }
@@ -39,12 +40,12 @@ fn map_render(
     win_size: Res<WinSize>,
 ) {
     // 576x324
-    let scale_y = win_size.h as f32 / 324.0;
-    commands.spawn_bundle(SpriteBundle {
-        material: materials.background.clone(),
-        transform: Transform::from_scale(Vec3::new(scale_y, scale_y, 0.)),
-        ..Default::default()
-    });
+    // let scale_y = win_size.h as f32 / 324.0;
+    // commands.spawn_bundle(SpriteBundle {
+    //     material: materials.background.clone(),
+    //     transform: Transform::from_scale(Vec3::new(scale_y, scale_y, 0.)),
+    //     ..Default::default()
+    // });
 
     for (i, tile) in map
         .tiles
@@ -55,30 +56,62 @@ fn map_render(
         let material = match &tile {
             TileType::Spike => Some(materials.tile_spikes.clone()),
             TileType::Empty => None,
+            TileType::Platform => {
+                // previous tile was same row and a solid?
+                if (i - 1) / map.width as usize == i / map.width as usize
+                    && map.tiles[i - 1] == TileType::Platform
+                {
+                    // current tile is not end of row or next tile is solid
+                    if i as i32 % map.width != map.width - 1 as i32
+                        && map.tiles[i + 1] == TileType::Platform
+                    {
+                        Some(materials.tile_edge.clone())
+                    } else {
+                        Some(materials.tile_edge.clone())
+                    }
+                // previous tile was air or first tile in row
+                } else if (i - 1) / map.width as usize != i / map.width as usize
+                    || map.tiles[i - 1] != TileType::Platform
+                {
+                    // current tile is end of row
+                    if i as i32 % map.width == map.width - 1 as i32 {
+                        Some(materials.tile_edge.clone())
+                    // next tile is air
+                    } else if map.tiles[i + 1] != TileType::Platform {
+                        Some(materials.tile_edge.clone())
+                    } else {
+                        Some(materials.tile_edge.clone())
+                    }
+                } else {
+                    Some(materials.tile_edge.clone())
+                }
+            }
             TileType::Solid => {
                 // previous tile was same row and a solid?
-                if (i - 1) / 32 == i / 32 && map.tiles[i - 1] == TileType::Solid {
+                if (i - 1) / map.width as usize == i / map.width as usize
+                    && map.tiles[i - 1] == TileType::Solid
+                {
                     // current tile is not end of row or next tile is solid
                     if i as i32 % map.width != map.width - 1 as i32
                         && map.tiles[i + 1] == TileType::Solid
                     {
-                        Some(materials.tile_middle.clone())
+                        Some(materials.tile_wall_middle.clone())
                     } else {
-                        Some(materials.tile_right.clone())
+                        Some(materials.tile_wall_right.clone())
                     }
                 // previous tile was air or first tile in row
                 } else if (i - 1) / 32 != i / 32 || map.tiles[i - 1] != TileType::Solid {
                     // current tile is end of row
                     if i as i32 % map.width == map.width - 1 as i32 {
-                        Some(materials.tile_island.clone())
+                        Some(materials.tile_wall_middle.clone())
                     // next tile is air
                     } else if map.tiles[i + 1] != TileType::Solid {
-                        Some(materials.tile_island.clone())
+                        Some(materials.tile_wall_middle.clone())
                     } else {
-                        Some(materials.tile_left.clone())
+                        Some(materials.tile_wall_left.clone())
                     }
                 } else {
-                    Some(materials.tile_middle.clone())
+                    Some(materials.tile_wall_middle.clone())
                 }
             }
         };
@@ -88,7 +121,7 @@ fn map_render(
                 material: material.unwrap(),
                 transform: Transform {
                     translation: Vec3::new(pos.x, pos.y, 1.),
-                    scale: Vec3::ONE,
+                    scale: Vec3::new(map.sprite_scale, map.sprite_scale, 1.),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -104,6 +137,7 @@ pub struct Map {
     pub width: i32,
     pub height: i32,
     pub tile_size: i32,
+    pub sprite_scale: f32,
     pub tiles: Vec<TileType>,
     pub starting_positions: Vec<Vec2>,
 }
@@ -116,6 +150,7 @@ impl Default for Map {
             height: 0,
             tiles: vec![TileType::Empty; 0 as usize],
             tile_size: 32,
+            sprite_scale: 2.0,
             starting_positions: vec![Vec2::ZERO; 4],
         }
     }
@@ -130,6 +165,7 @@ impl Map {
             height,
             tiles: vec![TileType::Empty; (width * height) as usize],
             tile_size: 32,
+            sprite_scale: 2.0,
             starting_positions: vec![Vec2::ZERO; 4],
         }
     }
@@ -141,6 +177,7 @@ impl Map {
             height,
             tiles: vec![TileType::Empty; (width * height) as usize],
             tile_size: 32,
+            sprite_scale: 2.0,
             starting_positions: vec![Vec2::ZERO; 4],
         }
     }
@@ -188,6 +225,11 @@ impl Map {
         tile == TileType::Solid || tile == TileType::Spike
     }
 
+    pub fn is_platform(&self, x: i32, y: i32) -> bool {
+        let tile = self.tile(x, y);
+        tile == TileType::Platform
+    }
+
     pub fn is_ground(&self, x: i32, y: i32) -> bool {
         if x < 0 || x > self.width || y < 0 || y > self.height {
             false
@@ -221,9 +263,9 @@ const DEFAULT_MAP: (&str, i32, i32) = (
 ------X-------------------------
 -----#####----------------------
 ----------------------X---------
---##############-----###--------
---------------------------#-----
-----------------------X---#-----
+--####===#######-----###--------
+--------------------------==----
+----------------------X---------
 ---------------------#########--
 ------X-----######--------------
 --########----------------------
@@ -265,6 +307,7 @@ pub fn from_prefab(prefab: (&str, i32, i32)) -> Map {
             match c {
                 '-' => new_tiles[idx] = TileType::Empty,
                 '^' => new_tiles[idx] = TileType::Spike,
+                '=' => new_tiles[idx] = TileType::Platform,
                 'X' => {
                     starting_positions.push(map.tile_position(tx, map.height - ty - 1));
                     new_tiles[idx] = TileType::Empty

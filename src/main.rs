@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use map::MapPlugin;
 use physics::PhysicsPlugin;
 use player::PlayerPlugin;
-use resources::{CharacterTileset, Materials, Tilesets, WinSize};
+use resources::{CharacterAnimation, CharacterTileset, Materials, Tilesets, WinSize};
 
 fn main() {
     App::build()
@@ -44,13 +44,53 @@ fn setup(
     let window = windows.get_primary_mut().unwrap();
     window.set_position(IVec2::new(2000, 0));
 
+    commands.insert_resource(CharacterAnimation {
+        idle_f0: materials.add(
+            asset_server
+                .load("new3/anim/idle/knight_m_idle_anim_f0.png")
+                .into(),
+        ),
+        idle_f1: materials.add(
+            asset_server
+                .load("new3/anim/idle/knight_m_idle_anim_f1.png")
+                .into(),
+        ),
+        idle_f2: materials.add(
+            asset_server
+                .load("new3/anim/idle/knight_m_idle_anim_f2.png")
+                .into(),
+        ),
+        idle_f3: materials.add(
+            asset_server
+                .load("new3/anim/idle/knight_m_idle_anim_f3.png")
+                .into(),
+        ),
+
+        run_f0: materials.add(
+            asset_server
+                .load("new3/anim/run/knight_m_run_anim_f0.png")
+                .into(),
+        ),
+        run_f1: materials.add(
+            asset_server
+                .load("new3/anim/run/knight_m_run_anim_f1.png")
+                .into(),
+        ),
+        run_f2: materials.add(
+            asset_server
+                .load("new3/anim/run/knight_m_run_anim_f2.png")
+                .into(),
+        ),
+        run_f3: materials.add(
+            asset_server
+                .load("new3/anim/run/knight_m_run_anim_f3.png")
+                .into(),
+        ),
+    });
+
     // create the main resources
     commands.insert_resource(Materials {
-        player: materials.add(asset_server.load("knight_f_idle_anim_f0.png").into()),
         projectile: materials.add(asset_server.load("new/bullet.png").into()),
-
-        bg_forest: materials.add(asset_server.load("new/background1.png").into()),
-        bg_snow: materials.add(asset_server.load("new/background2.png").into()),
 
         background: materials.add(asset_server.load("new2/Background.png").into()),
         tile_left: materials.add(asset_server.load("new2/TileSet_01.png").into()),
@@ -58,6 +98,14 @@ fn setup(
         tile_right: materials.add(asset_server.load("new2/TileSet_03.png").into()),
         tile_island: materials.add(asset_server.load("new2/TileSet_04.png").into()),
         tile_spikes: materials.add(asset_server.load("new2/Spikes1_1.png").into()),
+        tile_platform_left: materials.add(asset_server.load("new2/TileSet_36.png").into()),
+        tile_platform_middle: materials.add(asset_server.load("new2/TileSet_37.png").into()),
+        tile_platform_right: materials.add(asset_server.load("new2/TileSet_38.png").into()),
+        tile_platform_island: materials.add(asset_server.load("new2/TileSet_21.png").into()),
+        tile_wall_left: materials.add(asset_server.load("new3/wall_left.png").into()),
+        tile_wall_middle: materials.add(asset_server.load("new3/wall_mid.png").into()),
+        tile_wall_right: materials.add(asset_server.load("new3/wall_right.png").into()),
+        tile_edge: materials.add(asset_server.load("new3/edge.png").into()),
     });
 
     commands.insert_resource(CharacterTileset {

@@ -1,11 +1,19 @@
 use bevy::prelude::*;
 
-pub struct Materials {
-    pub player: Handle<ColorMaterial>,
-    pub projectile: Handle<ColorMaterial>,
+pub struct CharacterAnimation {
+    pub idle_f0: Handle<ColorMaterial>,
+    pub idle_f1: Handle<ColorMaterial>,
+    pub idle_f2: Handle<ColorMaterial>,
+    pub idle_f3: Handle<ColorMaterial>,
 
-    pub bg_forest: Handle<ColorMaterial>,
-    pub bg_snow: Handle<ColorMaterial>,
+    pub run_f0: Handle<ColorMaterial>,
+    pub run_f1: Handle<ColorMaterial>,
+    pub run_f2: Handle<ColorMaterial>,
+    pub run_f3: Handle<ColorMaterial>,
+}
+
+pub struct Materials {
+    pub projectile: Handle<ColorMaterial>,
 
     pub background: Handle<ColorMaterial>,
     pub tile_left: Handle<ColorMaterial>,
@@ -13,6 +21,15 @@ pub struct Materials {
     pub tile_right: Handle<ColorMaterial>,
     pub tile_island: Handle<ColorMaterial>,
     pub tile_spikes: Handle<ColorMaterial>,
+    pub tile_platform_left: Handle<ColorMaterial>,
+    pub tile_platform_middle: Handle<ColorMaterial>,
+    pub tile_platform_right: Handle<ColorMaterial>,
+    pub tile_platform_island: Handle<ColorMaterial>,
+
+    pub tile_wall_left: Handle<ColorMaterial>,
+    pub tile_wall_middle: Handle<ColorMaterial>,
+    pub tile_wall_right: Handle<ColorMaterial>,
+    pub tile_edge: Handle<ColorMaterial>,
 }
 
 pub struct Tilesets {
