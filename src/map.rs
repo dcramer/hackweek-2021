@@ -2,14 +2,12 @@ use bevy::prelude::*;
 use std::fmt;
 
 use crate::{
-    components::{Collider, Tile},
-    constants::{SPRITE_SCALE, TILE_SIZE},
-    display::normalize_pos,
+    components::Tile,
     resources::{Materials, Tilesets, WinSize},
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum TileType {
+pub enum TileType {
     Empty,
     Solid,
     Spike,
@@ -37,21 +35,16 @@ impl Plugin for MapPlugin {
 fn map_render(
     mut commands: Commands,
     map: Res<Map>,
-    tilesets: Res<Tilesets>,
     materials: Res<Materials>,
     win_size: Res<WinSize>,
 ) {
-    // 256x128
-    let scale_y = win_size.h as f32 / 128.0;
+    // 576x324
+    let scale_y = win_size.h as f32 / 324.0;
     commands.spawn_bundle(SpriteBundle {
-        material: materials.bg_forest.clone(),
+        material: materials.background.clone(),
         transform: Transform::from_scale(Vec3::new(scale_y, scale_y, 0.)),
         ..Default::default()
     });
-    let island_tile = 20;
-    let left_tile = 44;
-    let middle_tile = 45;
-    let right_tile = 46;
 
     for (i, tile) in map
         .tiles
@@ -59,163 +52,177 @@ fn map_render(
         .enumerate()
         .filter(|x| *x.1 != TileType::Empty)
     {
-        let (texture_atlas, sprite) = match &tile {
-            TileType::Spike => (tilesets.spikes.clone(), TextureAtlasSprite::new(0)),
-            TileType::Empty => (tilesets.forest.clone(), TextureAtlasSprite::new(0)),
+        let material = match &tile {
+            TileType::Spike => Some(materials.tile_spikes.clone()),
+            TileType::Empty => None,
             TileType::Solid => {
                 // previous tile was same row and a solid?
-                let tnum = if (i - 1) / 32 == i / 32 && map.tiles[i - 1] == TileType::Solid {
+                if (i - 1) / 32 == i / 32 && map.tiles[i - 1] == TileType::Solid {
                     // current tile is not end of row or next tile is solid
                     if i as i32 % map.width != map.width - 1 as i32
                         && map.tiles[i + 1] == TileType::Solid
                     {
-                        middle_tile
+                        Some(materials.tile_middle.clone())
                     } else {
-                        right_tile
+                        Some(materials.tile_right.clone())
                     }
                 // previous tile was air or first tile in row
                 } else if (i - 1) / 32 != i / 32 || map.tiles[i - 1] != TileType::Solid {
                     // current tile is end of row
                     if i as i32 % map.width == map.width - 1 as i32 {
-                        island_tile
+                        Some(materials.tile_island.clone())
                     // next tile is air
                     } else if map.tiles[i + 1] != TileType::Solid {
-                        island_tile
+                        Some(materials.tile_island.clone())
                     } else {
-                        left_tile
+                        Some(materials.tile_left.clone())
                     }
                 } else {
-                    middle_tile
-                };
-                (tilesets.forest.clone(), TextureAtlasSprite::new(tnum))
+                    Some(materials.tile_middle.clone())
+                }
             }
         };
-        let pos = normalize_pos(map.coords_to_pos(i as i32 % map.width, i as i32 / map.width));
+        let pos = map.tile_position(i as i32 % map.width, i as i32 / map.width);
         commands
-            .spawn_bundle(SpriteSheetBundle {
-                texture_atlas,
-                sprite,
+            .spawn_bundle(SpriteBundle {
+                material: material.unwrap(),
                 transform: Transform {
                     translation: Vec3::new(pos.x, pos.y, 1.),
-                    scale: Vec3::new(SPRITE_SCALE, SPRITE_SCALE, 1.0),
+                    scale: Vec3::ONE,
                     ..Default::default()
                 },
                 ..Default::default()
             })
-            .insert(Tile)
-            .insert(Collider::new(TILE_SIZE, TILE_SIZE));
+            .insert(Tile);
     }
-
-    // // draw bordering collider
-    // // - left
-    // commands
-    //     .spawn_bundle(ColliderBundle {
-    //         shape: ColliderShape::cuboid(2., map.height as f32 * SPRITE_SCALE),
-    //         position: Vec2::new(-(map.width as f32 + 2.) / 2. * SPRITE_SCALE, 0.).into(),
-    //         ..Default::default()
-    //     })
-    //     .insert_bundle(SpriteSheetBundle {
-    //         texture_atlas: tilesets.forest.clone(),
-    //         sprite: TextureAtlasSprite::new(40),
-    //         transform: Transform::from_scale(Vec3::new(1., (map.height) as f32 * SPRITE_SCALE, 1.)),
-    //         ..Default::default()
-    //     })
-    //     .insert(ColliderPositionSync::Discrete)
-    //     .insert(ColliderDebugRender::with_id(5));
-
-    // // - right
-    // commands
-    //     .spawn_bundle(ColliderBundle {
-    //         shape: ColliderShape::cuboid(1.0, (map.height) as f32 * SPRITE_SCALE),
-    //         position: Vec2::new((map.width as f32 + 2.) / 2. * SPRITE_SCALE, 0.).into(),
-    //         ..Default::default()
-    //     })
-    //     .insert_bundle(SpriteSheetBundle {
-    //         texture_atlas: tilesets.forest.clone(),
-    //         sprite: TextureAtlasSprite::new(40),
-    //         transform: Transform::from_scale(Vec3::new(1., (map.height) as f32 * SPRITE_SCALE, 1.)),
-    //         ..Default::default()
-    //     })
-    //     .insert(ColliderPositionSync::Discrete)
-    //     .insert(ColliderDebugRender::with_id(5));
-    // // - top
-    // commands
-    //     .spawn_bundle(ColliderBundle {
-    //         shape: ColliderShape::cuboid((map.width as f32 + 2.) * SPRITE_SCALE, 1.0),
-    //         position: Vec2::new(0., (map.height) as f32 / 2. * SPRITE_SCALE).into(),
-    //         ..Default::default()
-    //     })
-    //     .insert_bundle(SpriteSheetBundle {
-    //         texture_atlas: tilesets.forest.clone(),
-    //         sprite: TextureAtlasSprite::new(40),
-    //         transform: Transform::from_scale(Vec3::new(
-    //             (map.width as f32 + 3.) * SPRITE_SCALE,
-    //             1.,
-    //             1.,
-    //         )),
-    //         ..Default::default()
-    //     })
-    //     .insert(ColliderPositionSync::Discrete)
-    //     .insert(ColliderDebugRender::with_id(5));
-    // // - bottom
-    // commands
-    //     .spawn_bundle(ColliderBundle {
-    //         shape: ColliderShape::cuboid((map.width as f32 + 2.) * SPRITE_SCALE, 1.0),
-    //         position: Vec2::new(0., -(map.height) as f32 / 2. * SPRITE_SCALE).into(),
-    //         ..Default::default()
-    //     })
-    //     .insert_bundle(SpriteSheetBundle {
-    //         texture_atlas: tilesets.forest.clone(),
-    //         sprite: TextureAtlasSprite::new(40),
-    //         transform: Transform::from_scale(Vec3::new(
-    //             (map.width as f32 + 3.) * SPRITE_SCALE,
-    //             1.,
-    //             1.,
-    //         )),
-    //         ..Default::default()
-    //     })
-    //     .insert(ColliderPositionSync::Discrete)
-    //     .insert(ColliderDebugRender::with_id(5));
 }
 
 pub struct Map {
-    width: i32,
-    height: i32,
-    tiles: Vec<TileType>,
+    pub position: Vec3,
+
+    // width and height in tiles
+    pub width: i32,
+    pub height: i32,
+    pub tile_size: i32,
+    pub tiles: Vec<TileType>,
     pub starting_positions: Vec<Vec2>,
 }
 
+impl Default for Map {
+    fn default() -> Self {
+        Self {
+            position: Vec3::ZERO,
+            width: 0,
+            height: 0,
+            tiles: vec![TileType::Empty; 0 as usize],
+            tile_size: 32,
+            starting_positions: vec![Vec2::ZERO; 4],
+        }
+    }
+}
+
+// TODO: abstract tiles into a TileMap
 impl Map {
     pub fn new(width: i32, height: i32) -> Self {
         Self {
+            position: Vec3::ZERO,
             width,
             height,
             tiles: vec![TileType::Empty; (width * height) as usize],
+            tile_size: 32,
             starting_positions: vec![Vec2::ZERO; 4],
         }
     }
 
-    pub fn coords_to_idx(&self, x: i32, y: i32) -> usize {
+    pub fn from_position(position: Vec3, width: i32, height: i32) -> Self {
+        Self {
+            position,
+            width,
+            height,
+            tiles: vec![TileType::Empty; (width * height) as usize],
+            tile_size: 32,
+            starting_positions: vec![Vec2::ZERO; 4],
+        }
+    }
+
+    /// returns the the tile located at map position
+    pub fn tile_at_point(&self, point: Vec2) -> Vec2 {
+        Vec2::new(
+            self.tile_x_at_point(point.x) as f32,
+            self.tile_y_at_point(point.y) as f32,
+        )
+    }
+
+    pub fn tile_x_at_point(&self, x: f32) -> i32 {
+        (x - self.position.x).ceil() as i32 / self.tile_size
+    }
+
+    pub fn tile_y_at_point(&self, y: f32) -> i32 {
+        (y - self.position.y).ceil() as i32 / self.tile_size
+    }
+
+    /// translate relative tile position to map position
+    pub fn tile_position(&self, tile_x: i32, tile_y: i32) -> Vec2 {
+        Vec2::new(
+            ((tile_x * self.tile_size) as f32 + self.position.x).ceil(),
+            ((tile_y * self.tile_size) as f32 + self.position.y).ceil(),
+        )
+    }
+
+    /// translate relative tile position to index in tilemap
+    pub fn tile_index(&self, x: i32, y: i32) -> usize {
         ((y * self.width) + x) as usize
     }
 
-    // convert to absolute x/y used by bevy
-    pub fn coords_to_pos(&self, x: i32, y: i32) -> Vec2 {
-        Vec2::new(
-            (-(self.width / 2) + x) as f32 + 0.5,
-            ((self.height / 2) - y) as f32 - 0.5,
-        )
+    // return the tile at relative position
+    pub fn tile(&self, x: i32, y: i32) -> TileType {
+        if x < 0 || x > self.width || y < 0 || y > self.height {
+            TileType::Solid
+        } else {
+            self.tiles[self.tile_index(x, y)]
+        }
     }
+
+    pub fn is_obstacle(&self, x: i32, y: i32) -> bool {
+        let tile = self.tile(x, y);
+        tile == TileType::Solid || tile == TileType::Spike
+    }
+
+    pub fn is_ground(&self, x: i32, y: i32) -> bool {
+        if x < 0 || x > self.width || y < 0 || y > self.height {
+            false
+        } else {
+            self.tiles[((y * self.width) + x) as usize] == TileType::Solid
+        }
+    }
+
+    pub fn is_empty(&self, x: i32, y: i32) -> bool {
+        let tile = self.tile(x, y);
+        tile == TileType::Empty
+    }
+
+    // pub fn coords_to_idx(&self, x: i32, y: i32) -> usize {
+    //     ((y * self.width) + x) as usize
+    // }
+
+    // // convert to absolute x/y used by bevy
+    // pub fn coords_to_pos(&self, x: i32, y: i32) -> Vec2 {
+    //     Vec2::new(
+    //         (-(self.width / 2) + x) as f32 + 0.5,
+    //         ((self.height / 2) - y) as f32 - 0.5,
+    //     )
+    // }
 }
 
-const DFEAULT_MAP: (&str, i32, i32) = (
+// position is bottom left corner
+const DEFAULT_MAP: (&str, i32, i32) = (
     "
 --------------------------------
 ------X-------------------------
 -----#####----------------------
 ----------------------X---------
 --##############-----###--------
---##############----------#-----
+--------------------------#-----
 ----------------------X---#-----
 ---------------------#########--
 ------X-----######--------------
@@ -228,25 +235,38 @@ const DFEAULT_MAP: (&str, i32, i32) = (
 );
 
 pub fn build_default_map() -> Map {
-    let mut map = Map::new(DFEAULT_MAP.1, DFEAULT_MAP.2);
+    from_prefab(DEFAULT_MAP)
+}
+
+pub fn from_prefab(prefab: (&str, i32, i32)) -> Map {
+    let mut map = Map::from_position(
+        // center the map relative to 0/0
+        Vec3::new(
+            0.5 - prefab.1 as f32 * 32.0 / 2.,
+            0.5 - prefab.2 as f32 * 32.0 / 2.,
+            1.,
+        ),
+        prefab.1,
+        prefab.2,
+    );
     let mut new_tiles = map.tiles.clone();
     let mut starting_positions = Vec::new();
 
-    let string_vec: Vec<char> = DFEAULT_MAP
+    let string_vec: Vec<char> = prefab
         .0
         .chars()
-        .filter(|a| *a != '\r' && *a != '\n')
+        .filter(|a| *a != '\r' && *a != '\n' && *a != ' ')
         .collect();
     let mut i = 0;
-    for ty in 0..DFEAULT_MAP.2 {
-        for tx in 0..DFEAULT_MAP.1 {
-            let idx = map.coords_to_idx(tx, ty);
+    for ty in 0..prefab.2 {
+        for tx in 0..prefab.1 {
+            let idx = map.tile_index(tx, map.height - ty - 1);
             let c = string_vec[i];
             match c {
                 '-' => new_tiles[idx] = TileType::Empty,
                 '^' => new_tiles[idx] = TileType::Spike,
                 'X' => {
-                    starting_positions.push(map.coords_to_pos(tx, ty));
+                    starting_positions.push(map.tile_position(tx, map.height - ty - 1));
                     new_tiles[idx] = TileType::Empty
                 }
                 '#' => new_tiles[idx] = TileType::Solid,
@@ -256,13 +276,6 @@ pub fn build_default_map() -> Map {
         }
     }
 
-    // for y in 0..map.height {
-    //     for x in 0..map.width {
-    //         if y % 3 == 1 && x > 3 && x < 28 && x % 2 == 1 {
-    //             new_tiles[map.coords_to_idx(x, y)] = Tile::Solid;
-    //         }
-    //     }
-    // }
     map.starting_positions = starting_positions;
     map.tiles = new_tiles;
     map
@@ -273,16 +286,69 @@ mod tests {
     use super::*;
 
     #[test]
-    fn coords_to_idx() {
-        let map = Map::new(32, 16);
-        assert_eq!(map.coords_to_idx(3, 0), 3);
-        assert_eq!(map.coords_to_idx(35, 2), 99);
+    fn test_integration() {
+        let prefab: (&str, i32, i32) = (
+            "
+            -X--
+            -##-
+            ^^^^
+            ",
+            4,
+            3,
+        );
+        let mut map = from_prefab(prefab);
+        map.tile_size = 16;
+        map.position = Vec3::ZERO;
+
+        assert_eq!(map.tile(0, 0), TileType::Spike);
+        assert_eq!(map.tile(1, 0), TileType::Spike);
+        assert_eq!(map.tile(1, 1), TileType::Solid);
+        assert_eq!(map.tile(1, 2), TileType::Empty);
+
+        assert_eq!(map.is_obstacle(0, 0), true);
+        assert_eq!(map.is_obstacle(1, 1), true);
+        assert_eq!(map.is_obstacle(2, 1), true);
+        assert_eq!(map.is_obstacle(0, 1), false);
+        assert_eq!(map.is_obstacle(2, 2), false);
+
+        assert_eq!(map.tile_position(0, 0), Vec2::new(0., 0.));
+        assert_eq!(map.tile_position(3, 2), Vec2::new(48., 32.));
+
+        assert_eq!(map.tile_x_at_point(48.), 3);
+        assert_eq!(map.tile_y_at_point(32.), 2);
     }
 
     #[test]
-    fn coords_to_pos() {
-        let map = Map::new(32, 16);
-        assert_eq!(map.coords_to_pos(3, 0), Vec2::new(-208., 128.0));
-        assert_eq!(map.coords_to_pos(35, 9), Vec2::new(304., -16.));
+    fn tile_index() {
+        let mut map = Map::new(32, 16);
+        map.tile_size = 16;
+        assert_eq!(map.tile_index(0, 0), 0);
+        assert_eq!(map.tile_index(3, 15), 483);
+        assert_eq!(map.tile_index(35, 13), 451);
+    }
+
+    #[test]
+    fn tile_position() {
+        let mut map = Map::new(32, 16);
+        map.tile_size = 16;
+        map.position = Vec3::new(-256., -128., 0.);
+        assert_eq!(map.tile_position(31, 15), Vec2::new(240., 112.));
+        assert_eq!(map.tile_position(0, 0), Vec2::new(-256., -128.));
+    }
+
+    #[test]
+    fn tile_at_point() {
+        let mut map = Map::new(32, 16);
+        map.tile_size = 16;
+        map.position = Vec3::new(-256., -128., 0.);
+        assert_eq!(
+            map.tile_at_point(Vec2::new(244., 116.)),
+            Vec2::new(31., 15.)
+        );
+        assert_eq!(map.tile_at_point(Vec2::new(-159., 65.)), Vec2::new(6., 12.));
+        assert_eq!(
+            map.tile_at_point(Vec2::new(-256., -128.)),
+            Vec2::new(0., 0.)
+        );
     }
 }

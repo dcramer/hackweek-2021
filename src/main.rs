@@ -1,16 +1,15 @@
 mod components;
 mod constants;
-mod display;
-mod gravity;
 mod map;
+mod physics;
 mod player;
 mod resources;
 
 use bevy::prelude::*;
-use gravity::GravityPlugin;
 use map::MapPlugin;
+use physics::PhysicsPlugin;
 use player::PlayerPlugin;
-use resources::{Materials, Tilesets, WinSize};
+use resources::{CharacterTileset, Materials, Tilesets, WinSize};
 
 fn main() {
     App::build()
@@ -26,7 +25,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(PlayerPlugin)
         .add_plugin(MapPlugin)
-        .add_plugin(GravityPlugin)
+        .add_plugin(PhysicsPlugin)
         .add_startup_system(setup.system())
         .run();
 }
@@ -52,6 +51,22 @@ fn setup(
 
         bg_forest: materials.add(asset_server.load("new/background1.png").into()),
         bg_snow: materials.add(asset_server.load("new/background2.png").into()),
+
+        background: materials.add(asset_server.load("new2/Background.png").into()),
+        tile_left: materials.add(asset_server.load("new2/TileSet_01.png").into()),
+        tile_middle: materials.add(asset_server.load("new2/TileSet_02.png").into()),
+        tile_right: materials.add(asset_server.load("new2/TileSet_03.png").into()),
+        tile_island: materials.add(asset_server.load("new2/TileSet_04.png").into()),
+        tile_spikes: materials.add(asset_server.load("new2/Spikes1_1.png").into()),
+    });
+
+    commands.insert_resource(CharacterTileset {
+        hero: texture_atlases.add(TextureAtlas::from_grid(
+            asset_server.load("new2/PrototypeHero_noSword.png").into(),
+            Vec2::new(100.0, 100.0),
+            8,
+            12,
+        )),
     });
 
     commands.insert_resource(Tilesets {

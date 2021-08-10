@@ -1,9 +1,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    components::{Direction, Gravity, Player, PlayerReadyAttack, Projectile, Speed, Velocity},
-    constants::{SPRITE_SCALE, TIME_STEP},
-    display::normalize_pos,
+    components::{
+        Direction, Gravity, Movable, Player, PlayerReadyAttack, PlayerState, Projectile, Speed,
+        Velocity,
+    },
+    constants::{GRAVITY, MAX_FALLING_SPEED, SPRITE_SCALE, TIME_STEP},
     map::Map,
     resources::{Materials, WinSize},
 };
@@ -17,31 +19,31 @@ impl Plugin for PlayerPlugin {
             SystemStage::single(player_spawn.system()),
         )
         .add_system(player_movement.system())
-        .add_system(player_jump.system())
         .add_system(projectile_movement.system())
         .add_system(player_attack.system());
     }
 }
 
 fn player_spawn(mut commands: Commands, materials: Res<Materials>, map: Res<Map>) {
-    let spawn_pos = normalize_pos(map.starting_positions[0]);
+    let spawn_pos = map.starting_positions[0];
+    let transform = Transform {
+        translation: Vec3::new(spawn_pos.x, spawn_pos.y, 10.),
+        // scale: Vec3::new(SPRITE_SCALE * 0.57, SPRITE_SCALE * 0.57, 1.0),
+        ..Default::default()
+    };
+
     println!("Spawning player at {}, {}", spawn_pos.x, spawn_pos.y);
     commands
         .spawn_bundle(SpriteBundle {
             material: materials.player.clone(),
             // current sprite is 16x28
-            transform: Transform {
-                translation: Vec3::new(spawn_pos.x, spawn_pos.y, 1.),
-                scale: Vec3::new(SPRITE_SCALE, SPRITE_SCALE * 0.57, 1.0),
-                ..Default::default()
-            },
+            transform,
             ..Default::default()
         })
-        .insert(Velocity(0.))
-        .insert(Gravity(10.))
         .insert(Player::default())
         .insert(PlayerReadyAttack(true))
-        .insert(Speed::default());
+        .insert(Movable::from_transform(transform, 16., 28.))
+        .insert(Speed::new(240.0, 0.0));
 
     // spawn with default weapon
     // commands
@@ -59,43 +61,110 @@ fn player_spawn(mut commands: Commands, materials: Res<Materials>, map: Res<Map>
 
 fn player_movement(
     kb: Res<Input<KeyCode>>,
-    win_size: Res<WinSize>,
-    mut query: Query<(&Speed, &mut Player, &mut Transform, With<Player>)>,
+    time: Res<Time>,
+    mut query: Query<(&Speed, &mut Player, &mut Movable, With<Player>)>,
 ) {
-    if let Ok((speed, mut player, mut player_tf, _)) = query.single_mut() {
-        let move_x = if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
-            -1.0
-        } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
-            1.0
-        } else {
-            0.
-        };
+    if let Ok((speed, mut player, mut movable, _)) = query.single_mut() {
+        match player.state {
+            PlayerState::Stand => {
+                movable.speed = Vec3::ZERO;
 
-        let new_x = player_tf.translation.x + move_x * speed.0 * TIME_STEP;
-        if new_x < win_size.w / 2. && new_x > -win_size.w / 2. {
-            player_tf.translation.x = new_x;
-        }
-        if move_x > 0.0 && player.facing != Direction::Right {
-            player.facing = Direction::Right;
-            player_tf.scale = Vec3::new(-player_tf.scale.x, player_tf.scale.y, player_tf.scale.z);
-        } else if move_x < 0.0 && player.facing != Direction::Left {
-            player.facing = Direction::Left;
-            player_tf.scale = Vec3::new(-player_tf.scale.x, player_tf.scale.y, player_tf.scale.z);
-        }
-    }
-}
+                if !movable.on_ground {
+                    player.state = PlayerState::Jump;
+                    return;
+                }
 
-fn player_jump(
-    mut commands: Commands,
-    kb: Res<Input<KeyCode>>,
-    mut query: Query<(Entity, &Velocity, With<Gravity>)>,
-) {
-    if let Ok((player_entity, velocity, _)) = query.single_mut() {
-        if velocity.0 > -0.01
-            && velocity.0 < 0.01
-            && (kb.pressed(KeyCode::Up) || kb.pressed(KeyCode::W) || kb.pressed(KeyCode::Space))
-        {
-            commands.entity(player_entity).insert(Velocity(500.0));
+                // if left or right pressed, not both
+                if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
+                    != (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
+                {
+                    player.state = PlayerState::Walk;
+                    return;
+                // if jump pressed
+                } else if kb.pressed(KeyCode::Space) {
+                    movable.speed.y = player.jump_speed;
+                    player.state = PlayerState::Jump;
+                }
+            }
+            PlayerState::Walk => {
+                // if both left and right pressed, or no keys pressed, stop
+                if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
+                    == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
+                {
+                    player.state = PlayerState::Stand;
+                    movable.speed = Vec3::ZERO;
+                // go right
+                } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
+                    if movable.pushes_right_tile {
+                        movable.speed.x = 0.;
+                    } else {
+                        movable.speed.x = speed.0.x;
+                    }
+                    movable.scale.x = movable.scale.x.abs();
+                // go left
+                } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
+                    if movable.pushes_left_tile {
+                        movable.speed.x = 0.;
+                    } else {
+                        movable.speed.x = -speed.0.x;
+                    }
+                    movable.scale.x = -movable.scale.x.abs();
+                }
+                // if theres no tile to walk on, fall
+                if kb.pressed(KeyCode::Space) {
+                    movable.speed.y = player.jump_speed;
+                    player.state = PlayerState::Jump;
+                } else if !movable.on_ground {
+                    player.state = PlayerState::Jump;
+                }
+            }
+            PlayerState::Jump => {
+                movable.speed.y += GRAVITY * time.delta_seconds();
+                if movable.speed.y < MAX_FALLING_SPEED {
+                    movable.speed.y = MAX_FALLING_SPEED;
+                }
+
+                if !kb.pressed(KeyCode::Space) && movable.speed.y > 0. {
+                    if movable.speed.y > player.min_jump_speed {
+                        movable.speed.y = player.min_jump_speed;
+                    }
+                }
+
+                // stop moving
+                if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
+                    == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
+                {
+                    movable.speed.x = 0.;
+                // go right
+                } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
+                    if movable.pushes_right_tile {
+                        movable.speed.x = 0.;
+                    } else {
+                        movable.speed.x = speed.0.x;
+                    }
+                    movable.scale.x = movable.scale.x.abs();
+                // go left
+                } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
+                    if movable.pushes_left_tile {
+                        movable.speed.x = 0.;
+                    } else {
+                        movable.speed.x = -speed.0.x;
+                    }
+                    movable.scale.x = -movable.scale.x.abs();
+                }
+
+                if movable.on_ground {
+                    if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
+                        == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
+                    {
+                        player.state = PlayerState::Stand;
+                        movable.speed = Vec3::ZERO;
+                    } else {
+                        player.state = PlayerState::Walk;
+                        movable.speed.y = 0.;
+                    }
+                }
+            }
         }
     }
 }
@@ -132,7 +201,7 @@ fn player_attack(
                 .insert(Projectile {
                     direction: player.facing,
                 })
-                .insert(Speed(1000.));
+                .insert(Speed::new(1000., 1000.));
             ready_attack.0 = false;
         }
 
@@ -156,13 +225,13 @@ fn projectile_movement(
     for (proj_entity, projectile, proj_speed, mut proj_tf, _) in query.iter_mut() {
         let translation = &mut proj_tf.translation;
         if projectile.direction == Direction::Right {
-            translation.x += proj_speed.0 * TIME_STEP;
+            translation.x += proj_speed.0.x * TIME_STEP;
         } else if projectile.direction == Direction::Left {
-            translation.x -= proj_speed.0 * TIME_STEP;
+            translation.x -= proj_speed.0.x * TIME_STEP;
         } else if projectile.direction == Direction::Up {
-            translation.y += proj_speed.0 * TIME_STEP;
+            translation.y += proj_speed.0.y * TIME_STEP;
         } else if projectile.direction == Direction::Down {
-            translation.y -= proj_speed.0 * TIME_STEP;
+            translation.y -= proj_speed.0.y * TIME_STEP;
         }
         if translation.x > win_size.w / 2.
             || translation.x < -win_size.w / 2.
