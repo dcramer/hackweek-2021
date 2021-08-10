@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    components::{CanJump, Direction, Jumping, Player, PlayerReadyAttack, Projectile, Speed},
+    components::{Direction, Jumping, Player, PlayerReadyAttack, Projectile, Speed},
     constants::{JUMP_HEIGHT, JUMP_VELOCITY, SPRITE_SCALE, TIME_STEP},
     map::Map,
     Materials, WinSize,
@@ -37,7 +37,6 @@ fn player_spawn(mut commands: Commands, materials: Res<Materials>, map: Res<Map>
         .insert(Player::default())
         .insert(PlayerReadyAttack(true))
         .insert(Speed::default())
-        .insert(CanJump)
         .insert_bundle(RigidBodyBundle {
             body_type: RigidBodyType::Dynamic,
             // velocity: RigidBodyVelocity {
@@ -53,7 +52,7 @@ fn player_spawn(mut commands: Commands, materials: Res<Materials>, map: Res<Map>
             ..Default::default()
         })
         .insert_bundle(ColliderBundle {
-            shape: ColliderShape::cuboid(0.5, 0.5),
+            shape: ColliderShape::cuboid(SPRITE_SCALE / 2., SPRITE_SCALE / 2.),
             material: ColliderMaterial {
                 restitution: 0.,
                 friction: 0.,
@@ -116,13 +115,14 @@ fn player_jump(
     mut commands: Commands,
     kb: Res<Input<KeyCode>>,
     win_size: Res<WinSize>,
-    mut query: Query<(Entity, (With<Player>, Without<Jumping>))>,
+    mut query: Query<(Entity, &RigidBodyPosition, (With<Player>, Without<Jumping>))>,
     mut jumping_query: Query<(Entity, &mut RigidBodyPosition, &mut Jumping, With<Jumping>)>,
 ) {
     // can the player jump?
-    if let Ok((player_entity, _)) = query.single_mut() {
-        if kb.pressed(KeyCode::Up) || kb.pressed(KeyCode::W) || kb.pressed(KeyCode::Space) {
-            commands.entity(player_entity).remove::<CanJump>();
+    if let Ok((player_entity, player_rbp, _)) = query.single_mut() {
+        if (kb.pressed(KeyCode::Up) || kb.pressed(KeyCode::W) || kb.pressed(KeyCode::Space))
+            && player_rbp.next_position.translation.y == player_rbp.position.translation.y
+        {
             commands.entity(player_entity).insert(Jumping {
                 height: JUMP_HEIGHT,
             });
@@ -133,7 +133,9 @@ fn player_jump(
     for (jumping_entity, mut jumping_rbp, mut jumping, _) in jumping_query.iter_mut() {
         // TODO: how do we scale jump so its e.g. "3 sprites high"
         jumping.height -= JUMP_VELOCITY;
-        let jump_y = if jumping.height > 0. {
+        let jump_y = if jumping.height < 0. {
+            0.
+        } else if jumping.height > JUMP_VELOCITY {
             JUMP_VELOCITY
         } else {
             JUMP_VELOCITY - jumping.height
@@ -145,9 +147,7 @@ fn player_jump(
         if jumping.height < 0.
             && jumping_rbp.next_position.translation.y == jumping_rbp.position.translation.y
         {
-            println!("Can Jump");
             commands.entity(jumping_entity).remove::<Jumping>();
-            commands.entity(jumping_entity).insert(CanJump);
         }
     }
 }
@@ -167,7 +167,6 @@ fn player_attack(
         if ready_attack.0 && kb.pressed(KeyCode::Return) {
             let x = player_rbp.position.translation.x;
             let y = player_rbp.position.translation.y;
-            println!("{}, {}", x, y);
             commands
                 .spawn_bundle(SpriteBundle {
                     material: materials.projectile.clone(),
@@ -188,7 +187,7 @@ fn player_attack(
                 })
                 .insert(Speed(50.))
                 .insert_bundle(ColliderBundle {
-                    shape: ColliderShape::ball(0.5),
+                    shape: ColliderShape::ball(SPRITE_SCALE / 4.),
                     position: Vec2::new(x, y).into(),
                     material: ColliderMaterial {
                         restitution: 0.,
@@ -235,7 +234,6 @@ fn projectile_movement(
             || translation.y > win_size.h / 2.
             || translation.y < -win_size.h / 2.
         {
-            println!("despawning projectile");
             commands.entity(proj_entity).despawn();
         }
     }

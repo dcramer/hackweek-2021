@@ -103,13 +103,14 @@ fn map_render(
             })
             .insert(Tile)
             .insert_bundle(ColliderBundle {
-                shape: ColliderShape::cuboid(1., 1.),
+                shape: ColliderShape::cuboid(SPRITE_SCALE / 2., SPRITE_SCALE / 2.),
                 position: Vec2::new(pos.x * SPRITE_SCALE, pos.y * SPRITE_SCALE).into(),
                 material: ColliderMaterial {
                     restitution: 0.,
                     friction: 0.,
                     ..Default::default()
                 },
+                mass_properties: ColliderMassProps::Density(2.0),
                 ..Default::default()
             })
             .insert(ColliderPositionSync::Discrete)
@@ -120,7 +121,7 @@ fn map_render(
     // - left
     commands
         .spawn_bundle(ColliderBundle {
-            shape: ColliderShape::cuboid(1.0, map.height as f32 * SPRITE_SCALE),
+            shape: ColliderShape::cuboid(2., map.height as f32 * SPRITE_SCALE),
             position: Vec2::new(-(map.width as f32 + 2.) / 2. * SPRITE_SCALE, 0.).into(),
             ..Default::default()
         })

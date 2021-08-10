@@ -28,7 +28,6 @@ impl Default for Speed {
     }
 }
 
-pub struct CanJump;
 pub struct Jumping {
     pub height: f32,
 }

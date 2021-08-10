@@ -27,6 +27,7 @@ fn main() {
         .add_plugin(PlayerPlugin)
         .add_plugin(MapPlugin)
         .add_startup_system(setup.system())
+        .add_system(display_events.system())
         .run();
 }
 
@@ -83,4 +84,17 @@ fn setup(
         w: window.width(),
         h: window.height(),
     });
+}
+
+fn display_events(
+    mut intersection_events: EventReader<IntersectionEvent>,
+    mut contact_events: EventReader<ContactEvent>,
+) {
+    for intersection_event in intersection_events.iter() {
+        println!("Received intersection event: {:?}", intersection_event);
+    }
+
+    for contact_event in contact_events.iter() {
+        println!("Received contact event: {:?}", contact_event);
+    }
 }
