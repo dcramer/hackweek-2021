@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    components::{Direction, Movable, Player, PlayerReadyAttack, PlayerState, Projectile, Speed},
+    components::{Direction, Player, PlayerReadyAttack, PlayerState, Projectile, RigidBody, Speed},
     constants::{GRAVITY, MAX_FALLING_SPEED, PLATFORM_THRESHOLD, SPRITE_SCALE},
     map::Map,
     resources::{CharacterAnimation, Materials, WinSize},
@@ -39,7 +39,7 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
         })
         .insert(Player::default())
         .insert(PlayerReadyAttack(true))
-        .insert(Movable::from_transform(transform, 26., 32.))
+        .insert(RigidBody::from_transform(transform, 24., 32.))
         .insert(Speed::new(240.0, 0.0));
 
     // spawn with default weapon
@@ -76,14 +76,14 @@ fn player_animation(
 fn player_movement(
     kb: Res<Input<KeyCode>>,
     time: Res<Time>,
-    mut query: Query<(&Speed, &mut Player, &mut Movable, With<Player>)>,
+    mut query: Query<(&Speed, &mut Player, &mut RigidBody, With<Player>)>,
 ) {
-    if let Ok((speed, mut player, mut movable, _)) = query.single_mut() {
+    if let Ok((speed, mut player, mut rigidbody, _)) = query.single_mut() {
         match player.state {
             PlayerState::Stand => {
-                movable.speed = Vec3::ZERO;
+                rigidbody.speed = Vec3::ZERO;
 
-                if !movable.on_ground {
+                if !rigidbody.on_ground {
                     player.state = PlayerState::Jump;
                     return;
                 }
@@ -96,11 +96,11 @@ fn player_movement(
                     return;
                 // if jump pressed
                 } else if kb.pressed(KeyCode::Space) {
-                    movable.speed.y = player.jump_speed;
+                    rigidbody.speed.y = player.jump_speed;
                     player.state = PlayerState::Jump;
                 } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
-                    if movable.on_platform {
-                        movable.position.y -= PLATFORM_THRESHOLD;
+                    if rigidbody.on_platform {
+                        rigidbody.position.y -= PLATFORM_THRESHOLD;
                     }
                 }
             }
@@ -110,47 +110,47 @@ fn player_movement(
                     == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
                 {
                     player.state = PlayerState::Stand;
-                    movable.speed = Vec3::ZERO;
+                    rigidbody.speed = Vec3::ZERO;
                 // go right
                 } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
-                    if movable.pushes_right_tile {
-                        movable.speed.x = 0.;
+                    if rigidbody.pushes_right_tile {
+                        rigidbody.speed.x = 0.;
                     } else {
-                        movable.speed.x = speed.0.x;
+                        rigidbody.speed.x = speed.0.x;
                     }
-                    movable.scale.x = movable.scale.x.abs();
+                    rigidbody.scale.x = rigidbody.scale.x.abs();
                     player.facing = Direction::Right;
                 // go left
                 } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
-                    if movable.pushes_left_tile {
-                        movable.speed.x = 0.;
+                    if rigidbody.pushes_left_tile {
+                        rigidbody.speed.x = 0.;
                     } else {
-                        movable.speed.x = -speed.0.x;
+                        rigidbody.speed.x = -speed.0.x;
                     }
-                    movable.scale.x = -movable.scale.x.abs();
+                    rigidbody.scale.x = -rigidbody.scale.x.abs();
                     player.facing = Direction::Left;
                 } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
-                    if movable.on_platform {
-                        movable.position.y -= PLATFORM_THRESHOLD;
+                    if rigidbody.on_platform {
+                        rigidbody.position.y -= PLATFORM_THRESHOLD;
                     }
                 }
                 // if theres no tile to walk on, fall
                 if kb.pressed(KeyCode::Space) {
-                    movable.speed.y = player.jump_speed;
+                    rigidbody.speed.y = player.jump_speed;
                     player.state = PlayerState::Jump;
-                } else if !movable.on_ground {
+                } else if !rigidbody.on_ground {
                     player.state = PlayerState::Jump;
                 }
             }
             PlayerState::Jump => {
-                movable.speed.y += GRAVITY * time.delta_seconds();
-                if movable.speed.y < MAX_FALLING_SPEED {
-                    movable.speed.y = MAX_FALLING_SPEED;
+                rigidbody.speed.y += GRAVITY * time.delta_seconds();
+                if rigidbody.speed.y < MAX_FALLING_SPEED {
+                    rigidbody.speed.y = MAX_FALLING_SPEED;
                 }
 
-                if !kb.pressed(KeyCode::Space) && movable.speed.y > 0. {
-                    if movable.speed.y > player.min_jump_speed {
-                        movable.speed.y = player.min_jump_speed;
+                if !kb.pressed(KeyCode::Space) && rigidbody.speed.y > 0. {
+                    if rigidbody.speed.y > player.min_jump_speed {
+                        rigidbody.speed.y = player.min_jump_speed;
                     }
                 }
 
@@ -158,36 +158,36 @@ fn player_movement(
                 if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
                     == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
                 {
-                    movable.speed.x = 0.;
+                    rigidbody.speed.x = 0.;
                 // go right
                 } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
-                    if movable.pushes_right_tile {
-                        movable.speed.x = 0.;
+                    if rigidbody.pushes_right_tile {
+                        rigidbody.speed.x = 0.;
                     } else {
-                        movable.speed.x = speed.0.x;
+                        rigidbody.speed.x = speed.0.x;
                     }
-                    movable.scale.x = movable.scale.x.abs();
+                    rigidbody.scale.x = rigidbody.scale.x.abs();
                     player.facing = Direction::Right;
                 // go left
                 } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
-                    if movable.pushes_left_tile {
-                        movable.speed.x = 0.;
+                    if rigidbody.pushes_left_tile {
+                        rigidbody.speed.x = 0.;
                     } else {
-                        movable.speed.x = -speed.0.x;
+                        rigidbody.speed.x = -speed.0.x;
                     }
-                    movable.scale.x = -movable.scale.x.abs();
+                    rigidbody.scale.x = -rigidbody.scale.x.abs();
                     player.facing = Direction::Left;
                 }
 
-                if movable.on_ground {
+                if rigidbody.on_ground {
                     if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
                         == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
                     {
                         player.state = PlayerState::Stand;
-                        movable.speed = Vec3::ZERO;
+                        rigidbody.speed = Vec3::ZERO;
                     } else {
                         player.state = PlayerState::Walk;
-                        movable.speed.y = 0.;
+                        rigidbody.speed.y = 0.;
                     }
                 }
             }

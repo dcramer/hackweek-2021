@@ -49,7 +49,7 @@ pub enum PlayerState {
 
 pub struct PlayerReadyAttack(pub bool);
 
-pub struct Movable {
+pub struct RigidBody {
     pub old_position: Vec3,
     pub position: Vec3,
 
@@ -74,7 +74,7 @@ pub struct Movable {
     pub aabb: AABB,
     pub aabb_offset: Vec2,
 }
-impl Default for Movable {
+impl Default for RigidBody {
     fn default() -> Self {
         Self {
             old_position: Vec3::ZERO,
@@ -96,7 +96,7 @@ impl Default for Movable {
         }
     }
 }
-impl Movable {
+impl RigidBody {
     pub fn from_transform(transform: Transform, width: f32, height: f32) -> Self {
         let half_width = width / 2.;
         let half_height = height / 2.;

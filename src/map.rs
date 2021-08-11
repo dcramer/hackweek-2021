@@ -1,10 +1,6 @@
 use bevy::prelude::*;
-use std::fmt;
 
-use crate::{
-    components::Tile,
-    resources::{Materials, WinSize},
-};
+use crate::{components::Tile, resources::Materials};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TileType {
@@ -12,12 +8,6 @@ pub enum TileType {
     Platform,
     Solid,
     Spike,
-}
-
-impl fmt::Display for TileType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
 }
 
 pub struct MapPlugin;
@@ -33,20 +23,7 @@ impl Plugin for MapPlugin {
 // x = -128 to 128 (left to right)
 // y = 128 to -128 (top to bottom)
 
-fn map_render(
-    mut commands: Commands,
-    map: Res<Map>,
-    materials: Res<Materials>,
-    win_size: Res<WinSize>,
-) {
-    // 576x324
-    // let scale_y = win_size.h as f32 / 324.0;
-    // commands.spawn_bundle(SpriteBundle {
-    //     material: materials.background.clone(),
-    //     transform: Transform::from_scale(Vec3::new(scale_y, scale_y, 0.)),
-    //     ..Default::default()
-    // });
-
+fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) {
     for (i, tile) in map
         .tiles
         .iter()
@@ -182,6 +159,50 @@ impl Map {
         }
     }
 
+    pub fn from_prefab(prefab: (&str, i32, i32)) -> Self {
+        let mut map = Self::from_position(
+            // center the map relative to 0/0
+            Vec3::new(
+                0.5 - prefab.1 as f32 * 32.0 / 2.,
+                0.5 - prefab.2 as f32 * 32.0 / 2.,
+                1.,
+            ),
+            prefab.1,
+            prefab.2,
+        );
+        let mut new_tiles = map.tiles.clone();
+        let mut starting_positions = Vec::new();
+
+        let string_vec: Vec<char> = prefab
+            .0
+            .chars()
+            .filter(|a| *a != '\r' && *a != '\n' && *a != ' ')
+            .collect();
+        let mut i = 0;
+        for ty in 0..prefab.2 {
+            for tx in 0..prefab.1 {
+                let idx = map.tile_index(tx, map.height - ty - 1);
+                let c = string_vec[i];
+                match c {
+                    '-' => new_tiles[idx] = TileType::Empty,
+                    '^' => new_tiles[idx] = TileType::Spike,
+                    '=' => new_tiles[idx] = TileType::Platform,
+                    'X' => {
+                        starting_positions.push(map.tile_position(tx, map.height - ty - 1));
+                        new_tiles[idx] = TileType::Empty
+                    }
+                    '#' => new_tiles[idx] = TileType::Solid,
+                    _ => println!("No idea what to do with [{}]", c),
+                }
+                i += 1;
+            }
+        }
+
+        map.starting_positions = starting_positions;
+        map.tiles = new_tiles;
+        map
+    }
+
     /// returns the the tile located at map position
     pub fn tile_at_point(&self, point: Vec2) -> Vec2 {
         Vec2::new(
@@ -213,7 +234,7 @@ impl Map {
 
     // return the tile at relative position
     pub fn tile(&self, x: i32, y: i32) -> TileType {
-        if x < 0 || x > self.width || y < 0 || y > self.height {
+        if x < 0 || x > self.width - 1 || y < 0 || y > self.height - 1 {
             TileType::Solid
         } else {
             self.tiles[self.tile_index(x, y)]
@@ -281,51 +302,7 @@ const DEFAULT_MAP: (&str, i32, i32) = (
 );
 
 pub fn build_default_map() -> Map {
-    from_prefab(DEFAULT_MAP)
-}
-
-pub fn from_prefab(prefab: (&str, i32, i32)) -> Map {
-    let mut map = Map::from_position(
-        // center the map relative to 0/0
-        Vec3::new(
-            0.5 - prefab.1 as f32 * 32.0 / 2.,
-            0.5 - prefab.2 as f32 * 32.0 / 2.,
-            1.,
-        ),
-        prefab.1,
-        prefab.2,
-    );
-    let mut new_tiles = map.tiles.clone();
-    let mut starting_positions = Vec::new();
-
-    let string_vec: Vec<char> = prefab
-        .0
-        .chars()
-        .filter(|a| *a != '\r' && *a != '\n' && *a != ' ')
-        .collect();
-    let mut i = 0;
-    for ty in 0..prefab.2 {
-        for tx in 0..prefab.1 {
-            let idx = map.tile_index(tx, map.height - ty - 1);
-            let c = string_vec[i];
-            match c {
-                '-' => new_tiles[idx] = TileType::Empty,
-                '^' => new_tiles[idx] = TileType::Spike,
-                '=' => new_tiles[idx] = TileType::Platform,
-                'X' => {
-                    starting_positions.push(map.tile_position(tx, map.height - ty - 1));
-                    new_tiles[idx] = TileType::Empty
-                }
-                '#' => new_tiles[idx] = TileType::Solid,
-                _ => println!("No idea what to do with [{}]", c),
-            }
-            i += 1;
-        }
-    }
-
-    map.starting_positions = starting_positions;
-    map.tiles = new_tiles;
-    map
+    Map::from_prefab(DEFAULT_MAP)
 }
 
 #[cfg(test)]
@@ -343,7 +320,7 @@ mod tests {
             4,
             3,
         );
-        let mut map = from_prefab(prefab);
+        let mut map = Map::from_prefab(prefab);
         map.tile_size = 16;
         map.position = Vec3::ZERO;
 
