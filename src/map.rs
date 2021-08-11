@@ -27,7 +27,8 @@ impl Plugin for MapPlugin {
 // y = 128 to -128 (top to bottom)
 
 fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) {
-    let half_tile_size = map.tile_size as f32 / 2.0;
+    let tile_size = map.tile_size as f32;
+    let half_tile_size = tile_size / 2.0;
     for (i, tile) in map
         .tiles
         .iter()

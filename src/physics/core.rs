@@ -3,22 +3,9 @@
 use bevy::{core::FixedTimestep, prelude::*};
 
 // use crate::constants::PLATFORM_THRESHOLD;
-use crate::{
-    components::{Collider, RigidBody},
-    map::Map,
-};
+use crate::components::{Collider, RigidBody};
 
 const EPSILON: f32 = 1e-8;
-
-fn clamp(value: f32, min: f32, max: f32) -> f32 {
-    if value < min {
-        min
-    } else if value > max {
-        max
-    } else {
-        value
-    }
-}
 
 fn sign(value: f32) -> f32 {
     if value < 0. {
@@ -155,7 +142,7 @@ impl Collider {
         }
 
         let mut hit = Hit::new(self);
-        hit.time = clamp(near_time, 0., 1.);
+        hit.time = near_time.clamp(0., 1.);
         if near_time_x > near_time_y {
             hit.normal.x = -sign_x;
             hit.normal.y = 0.;
@@ -221,21 +208,15 @@ impl Collider {
         if let Some(mut hit) =
             self.intersect_segment(other.center, delta, other.half.x, other.half.y)
         {
-            sweep.time = clamp(hit.time - EPSILON, 0., 1.);
+            sweep.time = (hit.time - EPSILON).clamp(0., 1.);
             sweep.pos.x = other.center.x + delta.x * sweep.time;
             sweep.pos.y = other.center.y + delta.y * sweep.time;
             let direction = delta.clone();
             direction.normalize();
-            hit.pos.x = clamp(
-                hit.pos.x + direction.x * other.half.x,
-                self.center.x - self.half.x,
-                self.center.x + self.half.x,
-            );
-            hit.pos.y = clamp(
-                hit.pos.y + direction.y * other.half.y,
-                self.center.y - self.half.y,
-                self.center.y + self.half.y,
-            );
+            hit.pos.x = (hit.pos.x + direction.x * other.half.x)
+                .clamp(self.center.x - self.half.x, self.center.x + self.half.x);
+            hit.pos.y = (hit.pos.y + direction.y * other.half.y)
+                .clamp(self.center.y - self.half.y, self.center.y + self.half.y);
             sweep.hit = Some(hit);
         } else {
             sweep.pos.x = other.center.x + delta.x;
@@ -249,7 +230,6 @@ impl Collider {
 fn detect_collisions(
     collider_query: Query<&Collider>,
     mut rb_query: Query<(&mut RigidBody, &Collider)>,
-    map: Res<Map>,
     time: Res<Time>,
 ) {
     // first we need to compile a list of changes (compute all the movements and collisions)
@@ -271,11 +251,23 @@ fn detect_collisions(
 
         if let Some(hit) = nearest.hit {
             println!(
-                "Collision! @ {:?} into {:?} -> {:?}",
-                rigidbody.position, hit.pos, hit.delta
+                "Collision traveling from {:?} to {:?} - hit {:?} @ speed {:?} - adjust to {:?}",
+                rigidbody.old_position, rigidbody.position, hit.pos, rigidbody.speed, hit.delta
             );
             rigidbody.position.x += hit.delta.x;
             rigidbody.position.y += hit.delta.y;
+
+            if (hit.delta.x < 0. && rigidbody.speed.x > 0.)
+                || (hit.delta.x > 0. && rigidbody.speed.x < 0.)
+            {
+                rigidbody.speed.x = 0.;
+            } else if hit.delta.y > 0. && rigidbody.speed.y < 0. {
+                rigidbody.speed.y = 0.;
+                rigidbody.on_ground = true;
+            } else if hit.delta.y < 0. && rigidbody.speed.y > 0. {
+                rigidbody.speed.y = 0.;
+                rigidbody.on_ground = false;
+            }
         }
 
         // rigidbody.position.x += nearest.pos.x;
@@ -294,5 +286,91 @@ fn apply_movements(mut query: Query<(&mut Transform, &RigidBody, &mut Collider)>
 
         collider.center.x = rigidbody.position.x + collider.half.x;
         collider.center.y = rigidbody.position.y + collider.half.y;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_intersect_point_does_not_collide() {
+        let collider = Collider::new(Vec2::ZERO, Vec2::new(8., 8.));
+        let points = vec![
+            Vec2::new(-16., -16.),
+            Vec2::new(0., -16.),
+            Vec2::new(16., -16.),
+            Vec2::new(16., 0.),
+            Vec2::new(16., 16.),
+            Vec2::new(0., 16.),
+            Vec2::new(-16., 16.),
+            Vec2::new(-16., 0.),
+        ];
+
+        for point in points.iter() {
+            assert_eq!(collider.intersect_point(*point).is_none(), true);
+        }
+    }
+
+    #[test]
+    fn test_intersect_point_does_collide() {
+        let collider = Collider::new(Vec2::ZERO, Vec2::new(8., 8.));
+        let points = vec![Vec2::new(4., 4.)];
+
+        for point in points.iter() {
+            assert_eq!(collider.intersect_point(*point).is_some(), true);
+        }
+    }
+
+    #[test]
+    fn test_intersect_segment_does_not_collide() {
+        let collider = Collider::new(Vec2::ZERO, Vec2::new(8., 8.));
+        assert_eq!(
+            collider
+                .intersect_segment(Vec2::new(-16., -16.), Vec2::new(32., 0.), 0., 0.)
+                .is_none(),
+            true
+        );
+    }
+
+    #[test]
+    fn test_intersect_segment_does_collide() {
+        let collider = Collider::new(Vec2::ZERO, Vec2::new(8., 8.));
+        let point = Vec2::new(-16., 4.);
+        let delta = Vec2::new(32., 0.);
+        let result = collider.intersect_segment(point, delta, 0., 0.);
+        assert_eq!(result.is_some(), true);
+
+        let time = 0.25;
+        let hit = result.unwrap();
+        assert_eq!(hit.time, time);
+        assert_eq!(hit.pos.x, point.x + delta.x * time);
+        assert_eq!(hit.pos.y, point.y + delta.y * time);
+        assert_eq!(hit.delta.x, (1.0 - time) * -delta.x);
+        assert_eq!(hit.delta.y, (1.0 - time) * -delta.y);
+        assert_eq!(hit.normal.x, -1.);
+        assert_eq!(hit.normal.y, 0.);
+    }
+
+    #[test]
+    fn test_sweep_does_not_collide() {
+        let collider1 = Collider::new(Vec2::ZERO, Vec2::new(16., 16.));
+        let collider2 = Collider::new(Vec2::new(64., -64.), Vec2::new(8., 8.));
+        let delta = Vec2::new(0., 128.);
+        let sweep = collider1.sweep(&collider2, delta);
+        assert_eq!(sweep.hit.is_none(), true);
+        assert_eq!(sweep.pos.x, collider2.center.x + delta.x);
+        assert_eq!(sweep.pos.y, collider2.center.y + delta.y);
+    }
+
+    #[test]
+    fn test_sweep_does_collide() {
+        let collider1 = Collider::new(Vec2::ZERO, Vec2::new(16., 16.));
+        let collider2 = Collider::new(Vec2::new(0., -64.), Vec2::new(8., 8.));
+        let delta = Vec2::new(0., 128.);
+        let sweep = collider1.sweep(&collider2, delta);
+        assert_eq!(sweep.hit.is_some(), true);
+        // assert_eq!(sweep.pos.x, collider2.center.x + delta.x);
+        // assert_eq!(sweep.pos.y, collider2.center.y + delta.y);
     }
 }
