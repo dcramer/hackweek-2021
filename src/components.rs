@@ -1,7 +1,4 @@
-use bevy::{
-    math::{Vec2, Vec3},
-    prelude::Transform,
-};
+use bevy::prelude::*;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Direction {
@@ -48,6 +45,25 @@ pub enum PlayerState {
 }
 
 pub struct PlayerReadyAttack(pub bool);
+
+#[derive(Bundle)]
+pub struct PlayerBundle {
+    player: Player,
+    state: PlayerState,
+    ready_attack: PlayerReadyAttack,
+    speed: Speed,
+}
+
+impl Default for PlayerBundle {
+    fn default() -> Self {
+        Self {
+            player: Player::default(),
+            state: PlayerState::Stand,
+            ready_attack: PlayerReadyAttack(true),
+            speed: Speed::new(240.0, 0.0),
+        }
+    }
+}
 
 pub struct RigidBody {
     pub old_position: Vec3,

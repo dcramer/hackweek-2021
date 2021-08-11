@@ -258,14 +258,14 @@ fn detect_collisions(
         }
 
         if let Some(hit) = nearest.hit {
-            println!(
-                "Collision traveling from {:?} to {:?} - hit {:?} @ speed {:?} - adjust to {:?}",
-                rigidbody.old_position,
-                rigidbody.position,
-                hit.collider.center,
-                rigidbody.speed,
-                hit.delta
-            );
+            // println!(
+            //     "Collision traveling from {:?} to {:?} - hit {:?} @ speed {:?} - adjust to {:?}",
+            //     rigidbody.old_position,
+            //     rigidbody.position,
+            //     hit.collider.center,
+            //     rigidbody.speed,
+            //     hit.delta
+            // );
 
             // rigidbody.position.x += hit.delta.x + hit.normal.x;
             // rigidbody.position.y += hit.delta.y + hit.normal.y;

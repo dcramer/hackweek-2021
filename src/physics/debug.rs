@@ -5,10 +5,6 @@ use bevy::{core::FixedTimestep, prelude::*};
 // use crate::constants::PLATFORM_THRESHOLD;
 use crate::components::Collider;
 
-pub struct DebugCollider {
-    entity: u32,
-}
-
 pub struct HasDebugCollider;
 
 pub struct ColliderMaterials {

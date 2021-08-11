@@ -2,7 +2,8 @@ use bevy::prelude::*;
 
 use crate::{
     components::{
-        Collider, Direction, Player, PlayerReadyAttack, PlayerState, Projectile, RigidBody, Speed,
+        Collider, Direction, Player, PlayerBundle, PlayerReadyAttack, PlayerState, Projectile,
+        RigidBody, Speed,
     },
     constants::{GRAVITY, MAX_FALLING_SPEED, PLATFORM_THRESHOLD, SPRITE_SCALE},
     map::Map,
@@ -26,7 +27,7 @@ impl Plugin for PlayerPlugin {
 fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map: Res<Map>) {
     let spawn_pos = map.starting_positions[0];
     let transform = Transform {
-        translation: Vec3::new(spawn_pos.x, spawn_pos.y + 0.5, 10.),
+        translation: Vec3::new(spawn_pos.x, spawn_pos.y, 10.),
         scale: Vec3::new(1.5, 1.5, 1.),
         ..Default::default()
     };
@@ -40,14 +41,12 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
             transform,
             ..Default::default()
         })
-        .insert(Player::default())
-        .insert(PlayerReadyAttack(true))
+        .insert_bundle(PlayerBundle::default())
         .insert(RigidBody::from_transform(transform))
         .insert(Collider::new(
             Vec2::new(transform.translation.x + 12., transform.translation.y + 15.),
             Vec2::new(12., 15.),
-        ))
-        .insert(Speed::new(240.0, 0.0));
+        ));
 
     // spawn with default weapon
     // commands
@@ -61,23 +60,6 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
     //         ..Default::default()
     //     })
     //     .insert(Weapon);
-}
-
-fn player_animation(
-    char_anim: Res<CharacterAnimation>,
-    mut query: Query<(&mut Timer, &Player, &mut Sprite, With<Player>)>,
-) {
-    //     for (mut timer, player, mut material, _) in query.iter_mut() {
-    //         timer.tick(time.delta());
-    //         if timer.finished() {
-    //             if player.state == PlayerState::Stand {
-    //                 material.texture = char_anim.idle_f0.clone();
-    //             } else {
-    //                 material.texture = char_anim.run_f0.clone();
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 fn player_movement(
