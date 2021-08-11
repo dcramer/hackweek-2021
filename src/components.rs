@@ -70,9 +70,7 @@ pub struct RigidBody {
     pub pushed_right_tile: bool,
     pub pushes_left_tile: bool,
     pub pushed_left_tile: bool,
-
-    pub aabb: AABB,
-    pub aabb_offset: Vec2,
+    // pub aabb_offset: Vec2,
 }
 impl Default for RigidBody {
     fn default() -> Self {
@@ -91,49 +89,27 @@ impl Default for RigidBody {
             pushed_right_tile: false,
             pushes_left_tile: false,
             pushed_left_tile: false,
-            aabb: AABB::new(Vec2::ZERO, Vec2::ZERO),
-            aabb_offset: Vec2::ZERO,
+            // aabb_offset: Vec2::ZERO,
         }
     }
 }
 impl RigidBody {
-    pub fn from_transform(transform: Transform, width: f32, height: f32) -> Self {
-        let half_width = width / 2.;
-        let half_height = height / 2.;
+    pub fn from_transform(transform: Transform) -> Self {
         Self {
             old_position: transform.translation,
             position: transform.translation,
             scale: transform.scale,
-            aabb: AABB::new(
-                Vec2::new(
-                    transform.translation.x + half_width,
-                    transform.translation.y + half_height,
-                ),
-                Vec2::new(half_width, half_height),
-            ),
-            aabb_offset: Vec2::new(half_width, half_height),
             ..Default::default()
         }
     }
 }
-
-pub struct AABB {
+pub struct Collider {
     pub center: Vec2,
-    pub half_size: Vec2,
+    pub half: Vec2,
 }
-impl AABB {
-    pub fn new(center: Vec2, half_size: Vec2) -> Self {
-        Self { center, half_size }
-    }
-
-    pub fn overlaps(&self, other: AABB) -> bool {
-        if (self.center.x - other.center.y).abs() > self.half_size.x + other.half_size.x {
-            false
-        } else if (self.center.y - other.center.x).abs() > self.half_size.y + other.half_size.y {
-            false
-        } else {
-            true
-        }
+impl Collider {
+    pub fn new(center: Vec2, half: Vec2) -> Self {
+        Self { center, half }
     }
 }
 

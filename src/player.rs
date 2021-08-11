@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    components::{Direction, Player, PlayerReadyAttack, PlayerState, Projectile, RigidBody, Speed},
+    components::{
+        Collider, Direction, Player, PlayerReadyAttack, PlayerState, Projectile, RigidBody, Speed,
+    },
     constants::{GRAVITY, MAX_FALLING_SPEED, PLATFORM_THRESHOLD, SPRITE_SCALE},
     map::Map,
     resources::{CharacterAnimation, Materials, WinSize},
@@ -39,7 +41,11 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
         })
         .insert(Player::default())
         .insert(PlayerReadyAttack(true))
-        .insert(RigidBody::from_transform(transform, 24., 30.))
+        .insert(RigidBody::from_transform(transform))
+        .insert(Collider::new(
+            Vec2::new(transform.translation.x + 12., transform.translation.y + 15.),
+            Vec2::new(12., 15.),
+        ))
         .insert(Speed::new(240.0, 0.0));
 
     // spawn with default weapon
