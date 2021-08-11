@@ -1,13 +1,13 @@
-use bevy::prelude::*;
-
 use crate::{components::Tile, resources::Materials};
+use bevy::prelude::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TileType {
     Empty,
     Platform,
+    Ladder,
     Solid,
-    Spike,
+    Lava,
 }
 
 pub struct MapPlugin;
@@ -31,7 +31,8 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
         .filter(|x| *x.1 != TileType::Empty)
     {
         let material = match &tile {
-            TileType::Spike => Some(materials.tile_spike.clone()),
+            TileType::Lava => Some(materials.tile_lava_01.clone()),
+            TileType::Ladder => Some(materials.tile_ladder.clone()),
             TileType::Empty => None,
             TileType::Platform => {
                 // previous tile was same row and a solid?
@@ -185,8 +186,9 @@ impl Map {
                 let c = string_vec[i];
                 match c {
                     '-' => new_tiles[idx] = TileType::Empty,
-                    '^' => new_tiles[idx] = TileType::Spike,
+                    '^' => new_tiles[idx] = TileType::Lava,
                     '=' => new_tiles[idx] = TileType::Platform,
+                    '|' => new_tiles[idx] = TileType::Ladder,
                     'X' => {
                         starting_positions.push(map.tile_position(tx, map.height - ty - 1));
                         new_tiles[idx] = TileType::Empty
@@ -243,7 +245,7 @@ impl Map {
 
     pub fn is_obstacle(&self, x: i32, y: i32) -> bool {
         let tile = self.tile(x, y);
-        tile == TileType::Solid || tile == TileType::Spike
+        tile == TileType::Solid || tile == TileType::Lava
     }
 
     pub fn is_platform(&self, x: i32, y: i32) -> bool {
@@ -287,10 +289,10 @@ const DEFAULT_MAP: (&str, i32, i32) = (
 -------------#####------------------------------
 ---------------------====-----X---==------------
 -----------------------------###----------------
----------------#----##----#-------==------------
----------------#----------#---------------------
----------------####====####----#--==------------
---------------X----------------#--X-------------
+---------------#----##----#|------==------------
+---------------#----------#|--------------------
+---------------####====####|---#--==------------
+--------------X------------|---#--X-------------
 ----------###########################-----------
 ------------------------------------------------
 ----===---------------------------------===-----
@@ -324,8 +326,8 @@ mod tests {
         map.tile_size = 16;
         map.position = Vec3::ZERO;
 
-        assert_eq!(map.tile(0, 0), TileType::Spike);
-        assert_eq!(map.tile(1, 0), TileType::Spike);
+        assert_eq!(map.tile(0, 0), TileType::Lava);
+        assert_eq!(map.tile(1, 0), TileType::Lava);
         assert_eq!(map.tile(1, 1), TileType::Solid);
         assert_eq!(map.tile(1, 2), TileType::Empty);
 

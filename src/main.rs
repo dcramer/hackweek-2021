@@ -95,7 +95,20 @@ fn setup(
         tile_wall_middle: materials.add(asset_server.load("wall_mid.png").into()),
         tile_wall_right: materials.add(asset_server.load("wall_right.png").into()),
         tile_edge: materials.add(asset_server.load("edge.png").into()),
-        tile_spike: materials.add(asset_server.load("lava.png").into()),
+        tile_ladder: materials.add(asset_server.load("ladder.png").into()),
+
+        tile_lava_01: materials.add(asset_server.load("lava_01.png").into()),
+        tile_lava_02: materials.add(asset_server.load("lava_02.png").into()),
+        tile_lava_03: materials.add(asset_server.load("lava_03.png").into()),
+        tile_lava_04: materials.add(asset_server.load("lava_04.png").into()),
+        tile_lava_05: materials.add(asset_server.load("lava_05.png").into()),
+        tile_lava_06: materials.add(asset_server.load("lava_06.png").into()),
+        tile_lava_07: materials.add(asset_server.load("lava_07.png").into()),
+        tile_lava_08: materials.add(asset_server.load("lava_08.png").into()),
+        tile_lava_09: materials.add(asset_server.load("lava_09.png").into()),
+        tile_lava_10: materials.add(asset_server.load("lava_10.png").into()),
+        tile_lava_11: materials.add(asset_server.load("lava_11.png").into()),
+        tile_lava_12: materials.add(asset_server.load("lava_12.png").into()),
     });
 
     commands.insert_resource(WinSize {
