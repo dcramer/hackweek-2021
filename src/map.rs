@@ -236,7 +236,7 @@ impl Map {
 
     // return the tile at relative position
     pub fn tile(&self, x: i32, y: i32) -> TileType {
-        if x < 0 || x > self.width - 1 || y < 0 || y > self.height - 1 {
+        if x < 0 || x >= self.width || y < 0 || y >= self.height {
             TileType::Solid
         } else {
             self.tiles[self.tile_index(x, y)]
@@ -254,7 +254,7 @@ impl Map {
     }
 
     pub fn is_ground(&self, x: i32, y: i32) -> bool {
-        if x < 0 || x > self.width || y < 0 || y > self.height {
+        if x < 0 || x >= self.width || y < 0 || y >= self.height {
             false
         } else {
             self.tiles[((y * self.width) + x) as usize] == TileType::Solid
@@ -265,18 +265,6 @@ impl Map {
         let tile = self.tile(x, y);
         tile == TileType::Empty
     }
-
-    // pub fn coords_to_idx(&self, x: i32, y: i32) -> usize {
-    //     ((y * self.width) + x) as usize
-    // }
-
-    // // convert to absolute x/y used by bevy
-    // pub fn coords_to_pos(&self, x: i32, y: i32) -> Vec2 {
-    //     Vec2::new(
-    //         (-(self.width / 2) + x) as f32 + 0.5,
-    //         ((self.height / 2) - y) as f32 - 0.5,
-    //     )
-    // }
 }
 
 // position is bottom left corner
