@@ -39,7 +39,7 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
         })
         .insert(Player::default())
         .insert(PlayerReadyAttack(true))
-        .insert(Movable::from_transform(transform, 32., 32.))
+        .insert(Movable::from_transform(transform, 26., 32.))
         .insert(Speed::new(240.0, 0.0));
 
     // spawn with default weapon
