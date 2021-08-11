@@ -7,7 +7,7 @@ mod resources;
 
 use bevy::prelude::*;
 use map::MapPlugin;
-use physics::PhysicsPlugin;
+use physics::{DebugPhysicsPlugin, PhysicsPlugin};
 use player::PlayerPlugin;
 use resources::{CharacterAnimation, Materials, WinSize};
 
@@ -26,6 +26,7 @@ fn main() {
         .add_plugin(PlayerPlugin)
         .add_plugin(MapPlugin)
         .add_plugin(PhysicsPlugin)
+        .add_plugin(DebugPhysicsPlugin)
         .add_startup_system(setup.system())
         .run();
 }

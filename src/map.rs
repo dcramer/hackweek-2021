@@ -1,4 +1,7 @@
-use crate::{components::Tile, resources::Materials};
+use crate::{
+    components::{Collider, Tile},
+    resources::Materials,
+};
 use bevy::prelude::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -24,17 +27,28 @@ impl Plugin for MapPlugin {
 // y = 128 to -128 (top to bottom)
 
 fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) {
+    let half_tile_size = map.tile_size as f32 / 2.0;
     for (i, tile) in map
         .tiles
         .iter()
         .enumerate()
         .filter(|x| *x.1 != TileType::Empty)
     {
+        let pos = map.tile_position(i as i32 % map.width, i as i32 / map.width);
+        let mut sprite_scale = 2.0;
+        let mut collider_center = Vec2::new(pos.x + half_tile_size, pos.y + half_tile_size);
+        let mut collider_half = Vec2::new(half_tile_size, half_tile_size);
         let material = match &tile {
-            TileType::Lava => Some(materials.tile_lava_01.clone()),
+            TileType::Lava => {
+                sprite_scale = 1.0;
+                Some(materials.tile_lava_01.clone())
+            }
             TileType::Ladder => Some(materials.tile_ladder.clone()),
             TileType::Empty => None,
             TileType::Platform => {
+                collider_center = Vec2::new(pos.x + half_tile_size, pos.y + 6.);
+                collider_half = Vec2::new(half_tile_size, 6.);
+
                 // previous tile was same row and a solid?
                 if (i - 1) / map.width as usize == i / map.width as usize
                     && map.tiles[i - 1] == TileType::Platform
@@ -93,17 +107,17 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
                 }
             }
         };
-        let pos = map.tile_position(i as i32 % map.width, i as i32 / map.width);
         commands
             .spawn_bundle(SpriteBundle {
                 material: material.unwrap(),
                 transform: Transform {
                     translation: Vec3::new(pos.x, pos.y, 1.),
-                    scale: Vec3::new(map.sprite_scale, map.sprite_scale, 1.),
+                    scale: Vec3::new(sprite_scale, sprite_scale, 1.),
                     ..Default::default()
                 },
                 ..Default::default()
             })
+            .insert(Collider::new(collider_center, collider_half))
             .insert(Tile);
     }
 }
@@ -115,7 +129,6 @@ pub struct Map {
     pub width: i32,
     pub height: i32,
     pub tile_size: i32,
-    pub sprite_scale: f32,
     pub tiles: Vec<TileType>,
     pub starting_positions: Vec<Vec2>,
 }
@@ -128,7 +141,6 @@ impl Default for Map {
             height: 0,
             tiles: vec![TileType::Empty; 0 as usize],
             tile_size: 32,
-            sprite_scale: 2.0,
             starting_positions: vec![Vec2::ZERO; 4],
         }
     }
@@ -138,13 +150,10 @@ impl Default for Map {
 impl Map {
     pub fn new(width: i32, height: i32) -> Self {
         Self {
-            position: Vec3::ZERO,
             width,
             height,
             tiles: vec![TileType::Empty; (width * height) as usize],
-            tile_size: 32,
-            sprite_scale: 2.0,
-            starting_positions: vec![Vec2::ZERO; 4],
+            ..Default::default()
         }
     }
 
@@ -154,9 +163,7 @@ impl Map {
             width,
             height,
             tiles: vec![TileType::Empty; (width * height) as usize],
-            tile_size: 32,
-            sprite_scale: 2.0,
-            starting_positions: vec![Vec2::ZERO; 4],
+            ..Default::default()
         }
     }
 
