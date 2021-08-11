@@ -76,14 +76,14 @@ fn debug_colliders(
                     material: materials.collider_border.clone(),
                     transform: Transform {
                         translation: Vec3::new(
-                            0.,                              // center
-                            -rel_center.y + rel_half.y * 2., // top
+                            0.,         // center
+                            rel_half.y, // top
                             500.,
                         ),
                         scale: rel_scale,
                         ..Default::default()
                     },
-                    sprite: Sprite::new(Vec2::new(rel_half.x * 2., 1.)),
+                    sprite: Sprite::new(Vec2::new(collider.half.x * 2., 1.)),
                     ..Default::default()
                 });
                 // bottom
@@ -98,7 +98,7 @@ fn debug_colliders(
                 //         scale: relative_scale,
                 //         ..Default::default()
                 //     },
-                //     sprite: Sprite::new(Vec2::new(half_x * 2., 1.)),
+                //     sprite: Sprite::new(Vec2::new(collider.half.x * 2., 1.)),
                 //     ..Default::default()
                 // });
                 // // left
@@ -113,7 +113,7 @@ fn debug_colliders(
                 //         scale: relative_scale,
                 //         ..Default::default()
                 //     },
-                //     sprite: Sprite::new(Vec2::new(1., half_y * 2.)),
+                //     sprite: Sprite::new(Vec2::new(1., collider.half.y * 2.)),
                 //     ..Default::default()
                 // });
                 // // right

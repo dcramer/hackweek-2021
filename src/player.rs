@@ -26,7 +26,7 @@ impl Plugin for PlayerPlugin {
 fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map: Res<Map>) {
     let spawn_pos = map.starting_positions[0];
     let transform = Transform {
-        translation: Vec3::new(spawn_pos.x, spawn_pos.y, 10.),
+        translation: Vec3::new(spawn_pos.x, spawn_pos.y + 0.5, 10.),
         scale: Vec3::new(1.5, 1.5, 1.),
         ..Default::default()
     };
@@ -35,7 +35,8 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
     commands
         .spawn_bundle(SpriteBundle {
             material: char_anim.idle_f0.clone(),
-            // current sprite is 16x28
+            // sprite is 16x28
+            // scaled to 24x42
             transform,
             ..Default::default()
         })
@@ -104,6 +105,7 @@ fn player_movement(
                 } else if kb.pressed(KeyCode::Space) {
                     rigidbody.speed.y = player.jump_speed;
                     player.state = PlayerState::Jump;
+                // if drop pressed
                 } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
                     if rigidbody.on_platform {
                         rigidbody.position.y -= PLATFORM_THRESHOLD;
@@ -135,6 +137,7 @@ fn player_movement(
                     }
                     rigidbody.scale.x = -rigidbody.scale.x.abs();
                     player.facing = Direction::Left;
+                // if drop pressed
                 } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
                     if rigidbody.on_platform {
                         rigidbody.position.y -= PLATFORM_THRESHOLD;

@@ -235,14 +235,22 @@ fn detect_collisions(
     // first we need to compile a list of changes (compute all the movements and collisions)
     // then we will apply them
     for (mut rigidbody, rb_collider) in rb_query.iter_mut() {
-        rigidbody.old_position = rigidbody.position;
-        rigidbody.position.x += rigidbody.speed.x * time.delta_seconds();
-        rigidbody.position.y += rigidbody.speed.y * time.delta_seconds();
+        let new_position = Vec3::new(
+            rigidbody.position.x + rigidbody.speed.x * time.delta_seconds(),
+            rigidbody.position.y + rigidbody.speed.y * time.delta_seconds(),
+            rigidbody.position.z,
+        );
 
-        let delta = vec3_to_vec2(rigidbody.position - rigidbody.old_position);
+        // dont compute collisions if we haven't moved
+        if rigidbody.position == new_position {
+            continue;
+        }
+        rigidbody.old_position = rigidbody.position;
+
+        let delta = vec3_to_vec2(new_position - rigidbody.position);
         let mut nearest = Sweep::default();
         nearest.pos = rb_collider.center + delta;
-        for collider in collider_query.iter() {
+        for collider in collider_query.iter().filter(|c| *c != rb_collider) {
             let sweep = rb_collider.sweep(collider, delta);
             if sweep.time < nearest.time {
                 nearest = sweep;
@@ -252,26 +260,37 @@ fn detect_collisions(
         if let Some(hit) = nearest.hit {
             println!(
                 "Collision traveling from {:?} to {:?} - hit {:?} @ speed {:?} - adjust to {:?}",
-                rigidbody.old_position, rigidbody.position, hit.pos, rigidbody.speed, hit.delta
+                rigidbody.old_position,
+                rigidbody.position,
+                hit.collider.center,
+                rigidbody.speed,
+                hit.delta
             );
-            rigidbody.position.x += hit.delta.x;
-            rigidbody.position.y += hit.delta.y;
+
+            // rigidbody.position.x += hit.delta.x + hit.normal.x;
+            // rigidbody.position.y += hit.delta.y + hit.normal.y;
 
             if (hit.delta.x < 0. && rigidbody.speed.x > 0.)
-                || (hit.delta.x > 0. && rigidbody.speed.x < 0.)
+                || (hit.normal.x > 0. && rigidbody.speed.x < 0.)
             {
+                println!("collided with side tile");
                 rigidbody.speed.x = 0.;
-            } else if hit.delta.y > 0. && rigidbody.speed.y < 0. {
+            }
+            if hit.delta.y > 0. && rigidbody.speed.y < 0. {
+                println!("collided with ground");
                 rigidbody.speed.y = 0.;
                 rigidbody.on_ground = true;
             } else if hit.delta.y < 0. && rigidbody.speed.y > 0. {
+                println!("collided with ceiling");
                 rigidbody.speed.y = 0.;
-                rigidbody.on_ground = false;
             }
+        } else {
+            rigidbody.position = new_position;
         }
 
-        // rigidbody.position.x += nearest.pos.x;
-        // rigidbody.position.y += nearest.pos.y;
+        if rigidbody.speed.y >= 0. {
+            rigidbody.on_ground = false;
+        }
     }
 }
 
@@ -331,6 +350,13 @@ mod tests {
                 .is_none(),
             true
         );
+        // no movement
+        assert_eq!(
+            collider
+                .intersect_segment(Vec2::new(-16., -16.), Vec2::new(0., 0.), 0., 0.)
+                .is_none(),
+            true
+        );
     }
 
     #[test]
@@ -350,6 +376,20 @@ mod tests {
         assert_eq!(hit.delta.y, (1.0 - time) * -delta.y);
         assert_eq!(hit.normal.x, -1.);
         assert_eq!(hit.normal.y, 0.);
+
+        // static on top
+        let result = collider.intersect_segment(Vec2::new(8., 8.), Vec2::new(0., 0.), 0., 0.);
+        assert_eq!(result.is_some(), true);
+        let hit = result.unwrap();
+        assert_eq!(hit.delta.x, 0.);
+        assert_eq!(hit.delta.y, 0.);
+
+        // moving horizontal on top
+        let result = collider.intersect_segment(Vec2::new(4., 8.), Vec2::new(18., 0.), 0., 0.);
+        assert_eq!(result.is_some(), true);
+        let hit = result.unwrap();
+        assert_eq!(hit.delta.x, 0.);
+        assert_eq!(hit.delta.y, 0.);
     }
 
     #[test]

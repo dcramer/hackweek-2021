@@ -103,6 +103,8 @@ impl RigidBody {
         }
     }
 }
+
+#[derive(PartialEq)]
 pub struct Collider {
     pub center: Vec2,
     pub half: Vec2,
