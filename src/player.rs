@@ -25,7 +25,7 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
     let spawn_pos = map.starting_positions[0];
     let transform = Transform {
         translation: Vec3::new(spawn_pos.x, spawn_pos.y, 10.),
-        scale: Vec3::new(2., 2., 1.),
+        scale: Vec3::new(1.5, 1.5, 1.),
         ..Default::default()
     };
 
@@ -39,7 +39,7 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
         })
         .insert(Player::default())
         .insert(PlayerReadyAttack(true))
-        .insert(RigidBody::from_transform(transform, 24., 32.))
+        .insert(RigidBody::from_transform(transform, 24., 30.))
         .insert(Speed::new(240.0, 0.0));
 
     // spawn with default weapon

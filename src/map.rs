@@ -253,6 +253,11 @@ impl Map {
         tile == TileType::Platform
     }
 
+    pub fn is_ladder(&self, x: i32, y: i32) -> bool {
+        let tile = self.tile(x, y);
+        tile == TileType::Ladder
+    }
+
     pub fn is_ground(&self, x: i32, y: i32) -> bool {
         if x < 0 || x >= self.width || y < 0 || y >= self.height {
             false

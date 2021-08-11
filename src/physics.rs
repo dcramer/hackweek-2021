@@ -150,56 +150,56 @@ fn physics(mut query: Query<(&mut Transform, &mut RigidBody)>, map: Res<Map>, ti
         rigidbody.position.x += rigidbody.speed.x * time.delta_seconds();
         rigidbody.position.y += rigidbody.speed.y * time.delta_seconds();
 
-        let mut left_tile_x = 0.;
-        if rigidbody.speed.x <= 0.0
-            && collides_with_left_tile(
-                &map,
-                rigidbody.aabb.half_size,
-                rigidbody.aabb_offset,
-                rigidbody.old_position,
-                rigidbody.position,
-                &mut left_tile_x,
-            )
-        {
-            if rigidbody.old_position.x - rigidbody.aabb.half_size.x + rigidbody.aabb_offset.x
-                >= left_tile_x
-            {
-                println!("Collide with left wall!");
-                rigidbody.position.x = left_tile_x;
-                rigidbody.pushes_left_tile = true;
-            }
-            if rigidbody.speed.x < 0. {
-                rigidbody.speed.x = 0.0;
-            }
-            rigidbody.speed.x = 0.0;
-        } else {
-            rigidbody.pushes_left_tile = false;
-        }
+        // let mut left_tile_x = 0.;
+        // if rigidbody.speed.x <= 0.0
+        //     && collides_with_left_tile(
+        //         &map,
+        //         rigidbody.aabb.half_size,
+        //         rigidbody.aabb_offset,
+        //         rigidbody.old_position,
+        //         rigidbody.position,
+        //         &mut left_tile_x,
+        //     )
+        // {
+        //     if rigidbody.old_position.x - rigidbody.aabb.half_size.x + rigidbody.aabb_offset.x
+        //         >= left_tile_x
+        //     {
+        //         println!("Collide with left wall!");
+        //         rigidbody.position.x = left_tile_x;
+        //         rigidbody.pushes_left_tile = true;
+        //     }
+        //     if rigidbody.speed.x < 0. {
+        //         rigidbody.speed.x = 0.0;
+        //     }
+        //     rigidbody.speed.x = 0.0;
+        // } else {
+        //     rigidbody.pushes_left_tile = false;
+        // }
 
-        let mut right_tile_x = 0.;
-        if rigidbody.speed.x >= 0.0
-            && collides_with_right_tile(
-                &map,
-                rigidbody.aabb.half_size,
-                rigidbody.aabb_offset,
-                rigidbody.old_position,
-                rigidbody.position,
-                &mut right_tile_x,
-            )
-        {
-            println!("Collide with right wall!");
-            if rigidbody.old_position.x + rigidbody.aabb.half_size.x + rigidbody.aabb_offset.x
-                <= right_tile_x
-            {
-                rigidbody.position.x = right_tile_x;
-                rigidbody.pushes_right_tile = true;
-            }
-            if rigidbody.speed.x > 0. {
-                rigidbody.speed.x = 0.0;
-            }
-        } else {
-            rigidbody.pushes_right_tile = false;
-        }
+        // let mut right_tile_x = 0.;
+        // if rigidbody.speed.x >= 0.0
+        //     && collides_with_right_tile(
+        //         &map,
+        //         rigidbody.aabb.half_size,
+        //         rigidbody.aabb_offset,
+        //         rigidbody.old_position,
+        //         rigidbody.position,
+        //         &mut right_tile_x,
+        //     )
+        // {
+        //     println!("Collide with right wall!");
+        //     if rigidbody.old_position.x + rigidbody.aabb.half_size.x + rigidbody.aabb_offset.x
+        //         <= right_tile_x
+        //     {
+        //         rigidbody.position.x = right_tile_x;
+        //         rigidbody.pushes_right_tile = true;
+        //     }
+        //     if rigidbody.speed.x > 0. {
+        //         rigidbody.speed.x = 0.0;
+        //     }
+        // } else {
+        //     rigidbody.pushes_right_tile = false;
+        // }
 
         let mut on_platform = false;
         let mut ground_y = 0.;
@@ -215,31 +215,30 @@ fn physics(mut query: Query<(&mut Transform, &mut RigidBody)>, map: Res<Map>, ti
             )
         {
             rigidbody.speed.y = 0.0;
-            rigidbody.position.y = ground_y;
+            rigidbody.position.y = ground_y + rigidbody.aabb.half_size.y - rigidbody.aabb_offset.y;
             rigidbody.on_ground = true;
         } else {
             rigidbody.on_ground = false;
         }
         rigidbody.on_platform = on_platform;
 
-        let mut ceiling_y = 0.;
-        if rigidbody.speed.y >= 0.0
-            && has_ceiling(
-                &map,
-                rigidbody.aabb.half_size,
-                rigidbody.aabb_offset,
-                rigidbody.old_position,
-                rigidbody.position,
-                &mut ceiling_y,
-            )
-        {
-            println!("Collide with ceiling!");
-            rigidbody.position.y = ceiling_y - 1.;
-            rigidbody.speed.y = 0.0;
-            rigidbody.at_ceiling = true;
-        } else {
-            rigidbody.at_ceiling = false;
-        }
+        // let mut ceiling_y = 0.;
+        // if rigidbody.speed.y >= 0.0
+        //     && has_ceiling(
+        //         &map,
+        //         rigidbody.aabb.half_size,
+        //         rigidbody.aabb_offset,
+        //         rigidbody.old_position,
+        //         rigidbody.position,
+        //         &mut ceiling_y,
+        //     )
+        // {
+        //     rigidbody.position.y = ceiling_y - 1.;
+        //     rigidbody.speed.y = 0.0;
+        //     rigidbody.at_ceiling = true;
+        // } else {
+        //     rigidbody.at_ceiling = false;
+        // }
 
         rigidbody.aabb.center.x = rigidbody.position.x + rigidbody.aabb_offset.x;
         rigidbody.aabb.center.y = rigidbody.position.y + rigidbody.aabb_offset.y;
@@ -275,11 +274,6 @@ pub fn has_ground(
         center.x - aabb_half_size.x - Direction::Up.vec2().x + Direction::Right.vec2().x,
         center.y - aabb_half_size.y - Direction::Up.vec2().y + Direction::Right.vec2().y,
     ));
-    // find the bottom right sensor
-    // let new_bottom_right = round_vector(Vec2::new(
-    //     new_bottom_left.x + aabb.half_size.x * 2. - 2.,
-    //     new_bottom_left.y,
-    // ));
 
     let end_y = map.tile_y_at_point(new_bottom_left.y);
     let beg_y = cmp::max(map.tile_y_at_point(old_bottom_left.y) - 1, end_y);
@@ -375,9 +369,11 @@ pub fn has_ceiling(
 
             tile_x = map.tile_x_at_point(checked_tile_x as f32);
 
-            *ceiling_y = (tile_y * map.tile_size) as f32 - map.tile_size as f32 + map.position.y;
+            *ceiling_y =
+                (tile_y * map.tile_size) as f32 - aabb_half_size.y - aabb_offset.y + map.position.y;
 
             if map.is_obstacle(tile_x, tile_y) {
+                println!("Collided with {},{}", tile_x, tile_y);
                 return true;
             }
 
