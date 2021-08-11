@@ -137,12 +137,6 @@ impl AABB {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
-pub struct Velocity(pub f32);
-
-#[derive(Copy, Clone, PartialEq)]
-pub struct Gravity(pub f32);
-
 pub struct Speed(pub Vec3);
 impl Default for Speed {
     fn default() -> Self {

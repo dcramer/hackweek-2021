@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    components::{
-        Direction, Gravity, Movable, Player, PlayerReadyAttack, PlayerState, Projectile, Speed,
-        Velocity,
-    },
-    constants::{GRAVITY, MAX_FALLING_SPEED, PLATFORM_THRESHOLD, SPRITE_SCALE, TIME_STEP},
+    components::{Direction, Movable, Player, PlayerReadyAttack, PlayerState, Projectile, Speed},
+    constants::{GRAVITY, MAX_FALLING_SPEED, PLATFORM_THRESHOLD, SPRITE_SCALE},
     map::Map,
     resources::{CharacterAnimation, Materials, WinSize},
 };
@@ -122,6 +119,7 @@ fn player_movement(
                         movable.speed.x = speed.0.x;
                     }
                     movable.scale.x = movable.scale.x.abs();
+                    player.facing = Direction::Right;
                 // go left
                 } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
                     if movable.pushes_left_tile {
@@ -130,6 +128,7 @@ fn player_movement(
                         movable.speed.x = -speed.0.x;
                     }
                     movable.scale.x = -movable.scale.x.abs();
+                    player.facing = Direction::Left;
                 } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
                     if movable.on_platform {
                         movable.position.y -= PLATFORM_THRESHOLD;
@@ -168,6 +167,7 @@ fn player_movement(
                         movable.speed.x = speed.0.x;
                     }
                     movable.scale.x = movable.scale.x.abs();
+                    player.facing = Direction::Right;
                 // go left
                 } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
                     if movable.pushes_left_tile {
@@ -176,6 +176,7 @@ fn player_movement(
                         movable.speed.x = -speed.0.x;
                     }
                     movable.scale.x = -movable.scale.x.abs();
+                    player.facing = Direction::Left;
                 }
 
                 if movable.on_ground {
@@ -239,6 +240,7 @@ fn player_attack(
 fn projectile_movement(
     mut commands: Commands,
     win_size: Res<WinSize>,
+    time: Res<Time>,
     mut query: Query<(
         Entity,
         &Projectile,
@@ -250,13 +252,13 @@ fn projectile_movement(
     for (proj_entity, projectile, proj_speed, mut proj_tf, _) in query.iter_mut() {
         let translation = &mut proj_tf.translation;
         if projectile.direction == Direction::Right {
-            translation.x += proj_speed.0.x * TIME_STEP;
+            translation.x += proj_speed.0.x * time.delta_seconds();
         } else if projectile.direction == Direction::Left {
-            translation.x -= proj_speed.0.x * TIME_STEP;
+            translation.x -= proj_speed.0.x * time.delta_seconds();
         } else if projectile.direction == Direction::Up {
-            translation.y += proj_speed.0.y * TIME_STEP;
+            translation.y += proj_speed.0.y * time.delta_seconds();
         } else if projectile.direction == Direction::Down {
-            translation.y -= proj_speed.0.y * TIME_STEP;
+            translation.y -= proj_speed.0.y * time.delta_seconds();
         }
         if translation.x > win_size.w / 2.
             || translation.x < -win_size.w / 2.

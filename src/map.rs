@@ -3,7 +3,7 @@ use std::fmt;
 
 use crate::{
     components::Tile,
-    resources::{Materials, Tilesets, WinSize},
+    resources::{Materials, WinSize},
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -54,7 +54,7 @@ fn map_render(
         .filter(|x| *x.1 != TileType::Empty)
     {
         let material = match &tile {
-            TileType::Spike => Some(materials.tile_spikes.clone()),
+            TileType::Spike => Some(materials.tile_spike.clone()),
             TileType::Empty => None,
             TileType::Platform => {
                 // previous tile was same row and a solid?

@@ -133,7 +133,6 @@ pub fn has_ground(
                 *on_platform = true;
             }
 
-            println!("{}, {}", checked_tile_x, bottom_right.x);
             if checked_tile_x as f32 >= bottom_right.x {
                 if *on_platform {
                     return true;
