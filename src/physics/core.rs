@@ -267,8 +267,8 @@ fn detect_collisions(
             //     hit.delta
             // );
 
-            // rigidbody.position.x += hit.delta.x + hit.normal.x;
-            // rigidbody.position.y += hit.delta.y + hit.normal.y;
+            rigidbody.position.x += hit.delta.x + hit.normal.x;
+            rigidbody.position.y += hit.delta.y + hit.normal.y;
 
             if (hit.delta.x < 0. && rigidbody.speed.x > 0.)
                 || (hit.normal.x > 0. && rigidbody.speed.x < 0.)
