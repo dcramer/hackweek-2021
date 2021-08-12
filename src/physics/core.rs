@@ -1,4 +1,4 @@
-// Based on: https://gamedevelopment.tutsplus.com/tutorials/basic-2d-platformer-physics-part-2--cms-25922
+// based on http://noonat.github.io/intersect/
 
 use bevy::{core::FixedTimestep, prelude::*};
 
