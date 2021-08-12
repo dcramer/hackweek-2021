@@ -24,7 +24,12 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map: Res<Map>) {
+fn player_spawn(
+    mut commands: Commands,
+    materials: Res<Materials>,
+    char_anim: Res<CharacterAnimation>,
+    map: Res<Map>,
+) {
     let spawn_pos = map.starting_positions[0];
     let transform = Transform {
         translation: Vec3::new(spawn_pos.x, spawn_pos.y + 1., 10.),
@@ -35,17 +40,18 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
     println!("Spawning player at {}, {}", spawn_pos.x, spawn_pos.y);
     commands
         .spawn_bundle(SpriteBundle {
-            material: char_anim.idle_f0.clone(),
+            material: materials.blue.clone(),
             // sprite is 16x20
             // scaled to 24x30
             transform,
+            sprite: Sprite::new(Vec2::new(16., 20.)),
             ..Default::default()
         })
         .insert_bundle(PlayerBundle::default())
         .insert(RigidBody::from_transform(transform))
         .insert(Collider::from_position(
             transform.translation,
-            Vec2::new(7.5, 15.),
+            Vec2::new(8., 15.),
         ));
 
     // spawn with default weapon

@@ -197,7 +197,7 @@ impl Collider {
     pub fn sweep<'a, 'b>(&'a self, other: &'b Collider, delta: Vec2) -> Sweep<'a> {
         let mut sweep = Sweep::default();
 
-        if delta.x == -0. && delta.y == 0. {
+        if delta.x == 0. && delta.y == 0. {
             sweep.pos.x = other.center.x;
             sweep.pos.y = other.center.y;
             if let Some(mut hit) = self.intersect(other) {
@@ -250,13 +250,6 @@ impl Collider {
         nearest.pos = self.center + delta;
         for collider in collider_iter {
             let sweep = collider.sweep(self, delta);
-            println!(
-                "{:?} -> {:?} collider test @ {:?} = {:?}",
-                self.center,
-                delta,
-                collider.center,
-                sweep.hit.is_some()
-            );
             if sweep.time < nearest.time {
                 nearest = sweep;
             }
@@ -346,7 +339,7 @@ fn detect_collisions(
 
         // now we need to test if we're still.. on the ground. is there a better way to do this??
         if was_on_ground && body.on_ground {
-            let delta = Vec2::new(0., -1.0);
+            let delta = Vec2::new(0., -2.0);
             let nearest = new_collider.sweep_into(
                 collider_query
                     .iter()
@@ -354,9 +347,7 @@ fn detect_collisions(
                     .map(|(_, c)| c),
                 delta,
             );
-            println!("nearest {:?}", nearest.time);
             body.on_ground = nearest.hit.is_some();
-            info!("{:?}", body.on_ground);
         }
     }
 }
@@ -439,25 +430,82 @@ mod tests {
         assert_eq!(hit.delta.y, (1.0 - time) * -delta.y);
         assert_eq!(hit.normal.x, -1.);
         assert_eq!(hit.normal.y, 0.);
+    }
 
-        // static on top
-        let result = collider.intersect_segment(Vec2::new(8., 8.), Vec2::new(0., 0.), 0., 0.);
+    #[test]
+    fn test_intersect_segment_sets_hit_time_to_zero_when_segment_starts_inside_box() {
+        let collider = Collider::new(Vec2::ZERO, Vec2::new(8., 8.));
+        let point = Vec2::new(-4., 4.);
+        let delta = Vec2::new(32., 0.);
+        let result = collider.intersect_segment(point, delta, 0., 0.);
         assert_eq!(result.is_some(), true);
+
         let hit = result.unwrap();
         assert_eq!(hit.collider, &collider);
-        assert_eq!(hit.delta.x > 0., false);
-        assert_eq!(hit.delta.x < 0., false);
-        assert_eq!(hit.delta.y > 0., false);
-        assert_eq!(hit.delta.y < 0., false);
+        assert_eq!(hit.time, 0.);
+        assert_eq!(hit.pos.x, -4.);
+        assert_eq!(hit.pos.y, 4.);
+        assert_eq!(hit.delta.x, -delta.x);
+        assert_eq!(hit.delta.y, -delta.y);
+        assert_eq!(hit.normal.x, -1.);
+        assert_eq!(hit.normal.y, 0.);
+    }
 
-        // moving horizontal on top
-        // let result = collider.intersect_segment(Vec2::new(4., 8.), Vec2::new(18., 0.), 0., 0.);
-        // assert_eq!(result.is_some(), true);
-        // let hit = result.unwrap();
-        // assert_eq!(hit.collider, &collider);
-        // assert_eq!(hit.delta.x > 0., false);
-        // assert_eq!(hit.delta.x < 0., false);
-        // assert_eq!(hit.delta.y, 0.);
+    #[test]
+    fn test_intersect_segment_should_add_padding_to_half_size_box() {
+        let collider = Collider::new(Vec2::ZERO, Vec2::new(8., 8.));
+        let point = Vec2::new(-16., 4.);
+        let delta = Vec2::new(32., 0.);
+        let padding = 4.;
+        let result = collider.intersect_segment(point, delta, padding, padding);
+        assert_eq!(result.is_some(), true);
+
+        let time = 0.125;
+        let hit = result.unwrap();
+        assert_eq!(hit.collider, &collider);
+        assert_eq!(hit.time, time);
+        assert_eq!(hit.pos.x, point.x + delta.x * time);
+        assert_eq!(hit.pos.y, point.y + delta.y * time);
+        assert_eq!(hit.delta.x, (1.0 - time) * -delta.x);
+        assert_eq!(hit.delta.y, (1.0 - time) * -delta.y);
+        assert_eq!(hit.normal.x, -1.);
+        assert_eq!(hit.normal.y, 0.);
+    }
+
+    #[test]
+    fn test_intersect_segment_should_have_consistent_results_in_both_directions() {
+        let collider = Collider::new(Vec2::ZERO, Vec2::new(32., 32.));
+        let far_pos = Vec2::new(-64., 0.);
+        let far_to_near_delta = Vec2::new(-32., 0.);
+        assert_eq!(
+            collider
+                .intersect_segment(far_pos, far_to_near_delta, 0., 0.)
+                .is_none(),
+            true
+        );
+
+        let near_pos = Vec2::new(32., 0.);
+        let near_to_far_delta = Vec2::new(32., 0.);
+        assert_eq!(
+            collider
+                .intersect_segment(near_pos, near_to_far_delta, 0., 0.)
+                .is_none(),
+            true
+        );
+    }
+
+    #[test]
+    fn test_intersect_segment_should_work_when_axis_aligned() {
+        let collider = Collider::new(Vec2::ZERO, Vec2::new(16., 16.));
+        let pos = Vec2::new(-32., 0.);
+        let delta = Vec2::new(64., 0.);
+        let result = collider.intersect_segment(pos, delta, 0., 0.);
+        assert_eq!(result.is_some(), true);
+
+        let hit = result.unwrap();
+        assert_eq!(hit.time, 0.25);
+        assert_eq!(hit.normal.x, -1.);
+        assert_eq!(hit.normal.y, 0.);
     }
 
     #[test]
@@ -516,18 +564,46 @@ mod tests {
 
     #[test]
     fn test_sweep_into_does_collide() {
-        let collider1 = Collider::new(Vec2::new(64., -64.), Vec2::new(8., 8.));
+        let actor = Collider::new(Vec2::new(64., -64.), Vec2::new(8., 8.));
 
         let colliders = vec![
             Collider::new(Vec2::ZERO, Vec2::new(16., 16.)),
             Collider::new(Vec2::new(0., -64.), Vec2::new(8., 8.)),
         ];
         let delta = Vec2::new(-64., 128.);
-        let nearest = collider1.sweep_into(colliders.iter(), delta);
+        let nearest = actor.sweep_into(colliders.iter(), delta);
         assert_eq!(nearest.time, 0.625);
         assert_eq!(nearest.hit.is_some(), true);
 
         let hit = nearest.hit.unwrap();
         assert_eq!(*hit.collider, colliders[0]);
+    }
+
+    // XXX: I can't seem to debug math at all (bad brain) so lets write tests to check character movement
+    #[test]
+    fn test_horizontal_movement_no_gravity() {
+        let half = Vec2::new(16., 16.);
+        // start at the "left most" tile, with a vertical offset to prevent ground collision
+        let actor = Collider::new(Vec2::new(16., 17.), half);
+
+        let colliders = vec![
+            Collider::new(Vec2::ZERO, half),
+            Collider::new(Vec2::new(16., 0.), half),
+            Collider::new(Vec2::new(48., 0.), half),
+        ];
+        let delta = Vec2::new(4., 0.);
+        let nearest = actor.sweep_into(colliders.iter(), delta);
+        assert_eq!(nearest.time, 1.);
+        assert_eq!(nearest.hit.is_some(), false);
+
+        let delta = Vec2::new(-4., 0.);
+        let nearest = actor.sweep_into(colliders.iter(), delta);
+        assert_eq!(nearest.time, 1.);
+        assert_eq!(nearest.hit.is_some(), false);
+
+        let delta = Vec2::new(0., -2.);
+        let nearest = actor.sweep_into(colliders.iter(), delta);
+        // assert_eq!(nearest.time, 1.);
+        assert_eq!(nearest.hit.is_some(), true);
     }
 }

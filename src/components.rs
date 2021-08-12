@@ -130,14 +130,6 @@ impl Collider {
         Self::new(Vec2::new(pos.x + half.x, pos.y + half.y), half)
     }
 
-    pub fn edges(mut self, top: bool, right: bool, bottom: bool, left: bool) -> Self {
-        self.top = top;
-        self.right = right;
-        self.bottom = bottom;
-        self.left = left;
-        self
-    }
-
     pub fn center_from(&mut self, pos: Vec3) {
         self.center.x = pos.x + self.half.x;
         self.center.y = pos.y + self.half.y;

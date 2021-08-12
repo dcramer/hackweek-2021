@@ -90,6 +90,10 @@ fn setup(
 
     // create the main resources
     commands.insert_resource(Materials {
+        red: materials.add(Color::rgb(1., 0., 0.).into()),
+        green: materials.add(Color::rgb(0., 1., 0.).into()),
+        blue: materials.add(Color::rgb(0., 0., 1.).into()),
+
         projectile: materials.add(asset_server.load("bullet.png").into()),
 
         tile_wall_left: materials.add(asset_server.load("wall_left.png").into()),

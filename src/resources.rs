@@ -13,6 +13,10 @@ pub struct CharacterAnimation {
 }
 
 pub struct Materials {
+    pub red: Handle<ColorMaterial>,
+    pub green: Handle<ColorMaterial>,
+    pub blue: Handle<ColorMaterial>,
+
     pub projectile: Handle<ColorMaterial>,
     pub tile_wall_left: Handle<ColorMaterial>,
     pub tile_wall_middle: Handle<ColorMaterial>,
