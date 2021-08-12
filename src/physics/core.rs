@@ -243,14 +243,14 @@ fn detect_collisions(
     // then we will apply them
     for (mut rigidbody, rb_collider) in rb_query.iter_mut() {
         rigidbody.old_position = rigidbody.position;
-        // dont compute collisions if we haven't moved
-
-        if rigidbody.old_position == rigidbody.position {
-            continue;
-        }
 
         rigidbody.position.x += rigidbody.speed.x * time.delta_seconds();
         rigidbody.position.y += rigidbody.speed.y * time.delta_seconds();
+
+        // dont compute collisions if we haven't moved
+        if rigidbody.old_position == rigidbody.position {
+            continue;
+        }
 
         let delta = vec3_to_vec2(rigidbody.position - rigidbody.old_position);
         let mut nearest = Sweep::default();
