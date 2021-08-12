@@ -39,9 +39,13 @@ impl Plugin for PhysicsPlugin {
 
 pub struct Hit<'a> {
     collider: &'a Collider,
+    /// the point of contact between the two objects (or an estimation of it, in some sweep tests).
     pos: Vec2,
+    /// the overlap between the two objects, and is a vector that can be added to the colliding object’s position to move it back to a non-colliding state.
     delta: Vec2,
+    /// the surface normal at the point of contact.
     normal: Vec2,
+    /// defined for segment and sweep intersections, and is a fraction from 0 to 1 indicating how far along the line the collision occurred. (This is the tt value for the line equation L(t) = A + t(B - A)L(t)=A+t(B−A))
     time: f32,
 }
 impl<'a> Hit<'a> {
@@ -57,8 +61,11 @@ impl<'a> Hit<'a> {
 }
 
 pub struct Sweep<'a> {
+    /// Hit object if there was a collision, or null if not.
     hit: Option<Hit<'a>>,
+    /// the furthest point the object reached along the swept path before it hit something.
     pos: Vec2,
+    /// a copy of hit.time, offset by epsilon, or 1.0 if the object didn’t hit anything during the sweep.
     time: f32,
 }
 
