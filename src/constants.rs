@@ -1,4 +1,4 @@
-pub const GRAVITY: f32 = -1330.0;
+pub const GRAVITY: f32 = -1030.0;
 
 pub const MAX_FALLING_SPEED: f32 = -900.0;
 

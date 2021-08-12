@@ -290,8 +290,7 @@ fn detect_collisions(
                 rigidbody.speed.y = 0.;
             }
         }
-
-        if rigidbody.speed.y >= 0. {
+        if rigidbody.speed.y > 0. {
             rigidbody.on_ground = false;
         }
     }
