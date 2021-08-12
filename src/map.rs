@@ -34,7 +34,13 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
         .filter(|x| *x.1 != TileType::Empty)
     {
         let mut tile_size = Vec2::new(32., 32.);
-        let mut has_collider = true;
+        let mut half_tile_size = tile_size / 2.0;
+        let pos = map.tile_position(i as i32 % map.width, i as i32 / map.width);
+
+        let mut collider: Option<Collider> = Some(Collider::from_position(
+            Vec3::from((pos, 0.)),
+            half_tile_size,
+        ));
         let mut sprite_scale = 2.0;
         let material = match &tile {
             TileType::Lava => {
@@ -42,15 +48,28 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
                 Some(materials.tile_lava_01.clone())
             }
             TileType::Ladder => {
-                has_collider = false;
+                collider = None;
                 Some(materials.tile_ladder.clone())
             }
             TileType::Empty => None,
             TileType::Platform => {
                 tile_size = Vec2::new(32., 12.);
+                half_tile_size = tile_size / 2.;
+                collider = Some(Collider {
+                    center: Vec2::new(pos.x + half_tile_size.x, pos.y + 22.),
+                    half: Vec2::new(half_tile_size.x, 0.5),
+                    top: true,
+                    left: true,
+                    right: true,
+                    bottom: false,
+                });
                 Some(materials.tile_edge.clone())
             }
             TileType::Solid => {
+                collider = Some(Collider::from_position(
+                    Vec3::from((pos, 0.)),
+                    half_tile_size,
+                ));
                 // previous tile was same row and a solid?
                 if (i - 1) / map.width as usize == i / map.width as usize
                     && map.tiles[i - 1] == TileType::Solid
@@ -80,8 +99,6 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
             }
         };
 
-        let pos = map.tile_position(i as i32 % map.width, i as i32 / map.width);
-        let half_tile_size = tile_size / 2.0;
         let mut entity = commands.spawn();
 
         entity.insert_bundle(SpriteBundle {
@@ -95,11 +112,8 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
         });
         entity.insert(Tile);
 
-        if has_collider {
-            entity.insert(Collider::from_position(
-                Vec3::from((pos, 0.)),
-                half_tile_size,
-            ));
+        if let Some(c) = collider {
+            entity.insert(c);
         }
     }
 }

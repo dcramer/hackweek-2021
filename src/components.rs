@@ -111,19 +111,48 @@ impl RigidBody {
 pub struct Collider {
     pub center: Vec2,
     pub half: Vec2,
+
+    pub top: bool,
+    pub bottom: bool,
+    pub left: bool,
+    pub right: bool,
 }
 impl Collider {
     pub fn new(center: Vec2, half: Vec2) -> Self {
-        Self { center, half }
+        Self {
+            center,
+            half,
+            ..Default::default()
+        }
     }
 
     pub fn from_position(pos: Vec3, half: Vec2) -> Self {
         Self::new(Vec2::new(pos.x + half.x, pos.y + half.y), half)
     }
 
+    pub fn edges(mut self, top: bool, right: bool, bottom: bool, left: bool) -> Self {
+        self.top = top;
+        self.right = right;
+        self.bottom = bottom;
+        self.left = left;
+        self
+    }
+
     pub fn center_from(&mut self, pos: Vec3) {
         self.center.x = pos.x + self.half.x;
         self.center.y = pos.y + self.half.y;
+    }
+}
+impl Default for Collider {
+    fn default() -> Self {
+        Self {
+            center: Vec2::ZERO,
+            half: Vec2::ZERO,
+            top: true,
+            bottom: true,
+            left: true,
+            right: true,
+        }
     }
 }
 
