@@ -10,14 +10,6 @@ use crate::{
 
 const EPSILON: f32 = 1e-8;
 
-fn sign(value: f32) -> f32 {
-    if value < 0. {
-        -1.
-    } else {
-        1.
-    }
-}
-
 fn vec3_to_vec2(v3: Vec3) -> Vec2 {
     Vec2::new(v3.x, v3.y)
 }
@@ -100,13 +92,13 @@ impl Collider {
 
         let mut hit = Hit::new(self);
         if px < py {
-            let sx = sign(dx);
+            let sx = dx.signum();
             hit.delta.x = px * sx;
             hit.normal.x = sx;
             hit.pos.x = self.center.x + (self.half.x * sx);
             hit.pos.y = pos.y;
         } else {
-            let sy = sign(dy);
+            let sy = dy.signum();
             hit.delta.y = py * sy;
             hit.normal.y = sy;
             hit.pos.x = pos.x;
@@ -125,8 +117,8 @@ impl Collider {
     ) -> Option<Hit<'a>> {
         let scale_x = 1. / delta.x;
         let scale_y = 1. / delta.y;
-        let sign_x = sign(scale_x);
-        let sign_y = sign(scale_y);
+        let sign_x = scale_x.signum();
+        let sign_y = scale_y.signum();
         let near_time_x = (self.center.x - sign_x * (self.half.x + padding_x) - pos.x) * scale_x;
         let near_time_y = (self.center.y - sign_y * (self.half.y + padding_y) - pos.y) * scale_y;
         let far_time_x = (self.center.x + sign_x * (self.half.x + padding_x) - pos.x) * scale_x;
@@ -183,13 +175,13 @@ impl Collider {
 
         let mut hit = Hit::new(&self);
         if px < py {
-            let sx = sign(dx);
+            let sx = dx.signum();
             hit.delta.x = px * sx;
             hit.normal.x = sx;
             hit.pos.x = self.center.x + (self.half.x * sx);
             hit.pos.y = other.center.y;
         } else {
-            let sy = sign(dy);
+            let sy = dy.signum();
             hit.delta.y = py * sy;
             hit.normal.y = sy;
             hit.pos.x = other.center.x;
@@ -205,7 +197,7 @@ impl Collider {
     pub fn sweep<'a, 'b>(&'a self, other: &'b Collider, delta: Vec2) -> Sweep<'a> {
         let mut sweep = Sweep::default();
 
-        if delta.x == 0. && delta.y == 0. {
+        if delta.x == -0. && delta.y == 0. {
             sweep.pos.x = other.center.x;
             sweep.pos.y = other.center.y;
             if let Some(mut hit) = self.intersect(other) {
@@ -258,6 +250,13 @@ impl Collider {
         nearest.pos = self.center + delta;
         for collider in collider_iter {
             let sweep = collider.sweep(self, delta);
+            println!(
+                "{:?} -> {:?} collider test @ {:?} = {:?}",
+                self.center,
+                delta,
+                collider.center,
+                sweep.hit.is_some()
+            );
             if sweep.time < nearest.time {
                 nearest = sweep;
             }
@@ -333,7 +332,7 @@ fn detect_collisions(
                 // body.at_right_tile = hit.delta.x < 0.;
             }
 
-            if hit.delta.y > 0. && body.speed.y < 0. {
+            if hit.delta.y > 0. {
                 body.speed.y = 0.;
                 body.on_ground = true;
             }
@@ -355,7 +354,9 @@ fn detect_collisions(
                     .map(|(_, c)| c),
                 delta,
             );
+            println!("nearest {:?}", nearest.time);
             body.on_ground = nearest.hit.is_some();
+            info!("{:?}", body.on_ground);
         }
     }
 }
@@ -466,12 +467,13 @@ mod tests {
         let delta = Vec2::new(0., 128.);
         let sweep = collider1.sweep(&collider2, delta);
         assert_eq!(sweep.hit.is_none(), true);
+        assert_eq!(sweep.time, 1.);
         assert_eq!(sweep.pos.x, collider2.center.x + delta.x);
         assert_eq!(sweep.pos.y, collider2.center.y + delta.y);
     }
 
     #[test]
-    fn test_sweep_does_collide() {
+    fn test_sweep_does_collide_vertical() {
         let collider1 = Collider::new(Vec2::ZERO, Vec2::new(16., 16.));
         let collider2 = Collider::new(Vec2::new(0., -64.), Vec2::new(8., 8.));
         let delta = Vec2::new(0., 128.);
@@ -480,7 +482,52 @@ mod tests {
 
         let hit = sweep.hit.unwrap();
         assert_eq!(hit.collider, &collider1);
-        // assert_eq!(sweep.pos.x, collider2.center.x + delta.x);
-        // assert_eq!(sweep.pos.y, collider2.center.y + delta.y);
+        assert_eq!(hit.delta.x, -0.);
+        assert_eq!(hit.delta.y, -88.);
+    }
+
+    #[test]
+    fn test_sweep_does_collide_horizontal() {
+        let collider1 = Collider::new(Vec2::ZERO, Vec2::new(16., 16.));
+        let collider2 = Collider::new(Vec2::new(-64., 0.), Vec2::new(8., 8.));
+        let delta = Vec2::new(128., 0.);
+        let sweep = collider1.sweep(&collider2, delta);
+        assert_eq!(sweep.hit.is_some(), true);
+
+        let hit = sweep.hit.unwrap();
+        assert_eq!(hit.collider, &collider1);
+        assert_eq!(hit.delta.x, -88.);
+        assert_eq!(hit.delta.y, -0.);
+    }
+
+    #[test]
+    fn test_sweep_does_collide_diagonal() {
+        let collider1 = Collider::new(Vec2::ZERO, Vec2::new(16., 16.));
+        let collider2 = Collider::new(Vec2::new(-64., -64.), Vec2::new(8., 8.));
+        let delta = Vec2::new(128., 128.);
+        let sweep = collider1.sweep(&collider2, delta);
+        assert_eq!(sweep.hit.is_some(), true);
+
+        let hit = sweep.hit.unwrap();
+        assert_eq!(hit.collider, &collider1);
+        assert_eq!(hit.delta.x, -88.);
+        assert_eq!(hit.delta.y, -88.);
+    }
+
+    #[test]
+    fn test_sweep_into_does_collide() {
+        let collider1 = Collider::new(Vec2::new(64., -64.), Vec2::new(8., 8.));
+
+        let colliders = vec![
+            Collider::new(Vec2::ZERO, Vec2::new(16., 16.)),
+            Collider::new(Vec2::new(0., -64.), Vec2::new(8., 8.)),
+        ];
+        let delta = Vec2::new(-64., 128.);
+        let nearest = collider1.sweep_into(colliders.iter(), delta);
+        assert_eq!(nearest.time, 0.625);
+        assert_eq!(nearest.hit.is_some(), true);
+
+        let hit = nearest.hit.unwrap();
+        assert_eq!(*hit.collider, colliders[0]);
     }
 }
