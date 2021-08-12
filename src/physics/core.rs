@@ -245,7 +245,7 @@ fn detect_collisions(
         rigidbody.old_position = rigidbody.position;
         // dont compute collisions if we haven't moved
 
-        if rigidbody.position == rigidbody.position {
+        if rigidbody.old_position == rigidbody.position {
             continue;
         }
 
