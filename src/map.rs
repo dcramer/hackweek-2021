@@ -96,7 +96,10 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
         entity.insert(Tile);
 
         if has_collider {
-            entity.insert(Collider::new(pos + half_tile_size, half_tile_size));
+            entity.insert(Collider::from_position(
+                Vec3::from((pos, 0.)),
+                half_tile_size,
+            ));
         }
     }
 }

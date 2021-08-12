@@ -43,8 +43,8 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
         })
         .insert_bundle(PlayerBundle::default())
         .insert(RigidBody::from_transform(transform))
-        .insert(Collider::new(
-            Vec2::new(transform.translation.x + 12., transform.translation.y + 14.),
+        .insert(Collider::from_position(
+            transform.translation,
             Vec2::new(12., 14.),
         ));
 
