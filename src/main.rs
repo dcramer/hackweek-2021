@@ -26,7 +26,7 @@ fn main() {
         .add_plugin(PlayerPlugin)
         .add_plugin(MapPlugin)
         .add_plugin(PhysicsPlugin)
-        // .add_plugin(DebugPhysicsPlugin)
+        .add_plugin(DebugPhysicsPlugin)
         .add_startup_system(setup.system())
         .run();
 }

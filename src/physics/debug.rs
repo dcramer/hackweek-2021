@@ -59,10 +59,6 @@ fn debug_colliders(
         //           0
 
         // compute the delta between bottom left of collider
-        let rel_center = (collider.center
-            - Vec2::new(transform.translation.x, transform.translation.y))
-            * rel_scale_v2;
-
         commands
             .entity(entity)
             .insert(HasDebugCollider)
@@ -83,50 +79,50 @@ fn debug_colliders(
                     ..Default::default()
                 });
                 // bottom
-                // parent.spawn_bundle(SpriteBundle {
-                //     material: materials.collider_border.clone(),
-                //     transform: Transform {
-                //         translation: Vec3::new(
-                //             0.,                                                   // center
-                //            relative_botleft.y, // bottom
-                //             500.,
-                //         ),
-                //         scale: relative_scale,
-                //         ..Default::default()
-                //     },
-                //     sprite: Sprite::new(Vec2::new(collider.half.x * 2., 1.)),
-                //     ..Default::default()
-                // });
-                // // left
-                // parent.spawn_bundle(SpriteBundle {
-                //     material: materials.collider_border.clone(),
-                //     transform: Transform {
-                //         translation: Vec3::new(
-                //             -relative_center.x * relative_scale.x, // left
-                //             0.,                                    // center
-                //             500.,
-                //         ),
-                //         scale: relative_scale,
-                //         ..Default::default()
-                //     },
-                //     sprite: Sprite::new(Vec2::new(1., collider.half.y * 2.)),
-                //     ..Default::default()
-                // });
-                // // right
-                // parent.spawn_bundle(SpriteBundle {
-                //     material: materials.collider_border.clone(),
-                //     transform: Transform {
-                //         translation: Vec3::new(
-                //             relative_center.x * relative_scale.x, // right
-                //             0.,                                   // center
-                //             500.,
-                //         ),
-                //         scale: relative_scale,
-                //         ..Default::default()
-                //     },
-                //     sprite: Sprite::new(Vec2::new(1., half_y * 2.)),
-                //     ..Default::default()
-                // });
+                parent.spawn_bundle(SpriteBundle {
+                    material: materials.collider_border.clone(),
+                    transform: Transform {
+                        translation: Vec3::new(
+                            0.,          // center
+                            -rel_half.y, // bottom
+                            500.,
+                        ),
+                        scale: rel_scale,
+                        ..Default::default()
+                    },
+                    sprite: Sprite::new(Vec2::new(collider.half.x * 2., 1.)),
+                    ..Default::default()
+                });
+                // left
+                parent.spawn_bundle(SpriteBundle {
+                    material: materials.collider_border.clone(),
+                    transform: Transform {
+                        translation: Vec3::new(
+                            -rel_half.x, // left
+                            0.,          // center
+                            500.,
+                        ),
+                        scale: rel_scale,
+                        ..Default::default()
+                    },
+                    sprite: Sprite::new(Vec2::new(1., collider.half.y * 2.)),
+                    ..Default::default()
+                });
+                // right
+                parent.spawn_bundle(SpriteBundle {
+                    material: materials.collider_border.clone(),
+                    transform: Transform {
+                        translation: Vec3::new(
+                            rel_half.x, // right
+                            0.,         // center
+                            500.,
+                        ),
+                        scale: rel_scale,
+                        ..Default::default()
+                    },
+                    sprite: Sprite::new(Vec2::new(1., collider.half.y * 2.)),
+                    ..Default::default()
+                });
             });
     }
 }

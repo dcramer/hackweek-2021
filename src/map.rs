@@ -27,57 +27,28 @@ impl Plugin for MapPlugin {
 // y = 128 to -128 (top to bottom)
 
 fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) {
-    let tile_size = map.tile_size as f32;
-    let half_tile_size = tile_size / 2.0;
     for (i, tile) in map
         .tiles
         .iter()
         .enumerate()
         .filter(|x| *x.1 != TileType::Empty)
     {
-        let pos = map.tile_position(i as i32 % map.width, i as i32 / map.width);
+        let mut tile_size = Vec2::new(32., 32.);
+        let mut has_collider = true;
         let mut sprite_scale = 2.0;
-        let mut collider_center = Vec2::new(pos.x + half_tile_size, pos.y + half_tile_size);
-        let mut collider_half = Vec2::new(half_tile_size, half_tile_size);
         let material = match &tile {
             TileType::Lava => {
                 sprite_scale = 1.0;
                 Some(materials.tile_lava_01.clone())
             }
-            TileType::Ladder => Some(materials.tile_ladder.clone()),
+            TileType::Ladder => {
+                has_collider = false;
+                Some(materials.tile_ladder.clone())
+            }
             TileType::Empty => None,
             TileType::Platform => {
-                collider_center = Vec2::new(pos.x + half_tile_size, pos.y + 6.);
-                collider_half = Vec2::new(half_tile_size, 6.);
-
-                // previous tile was same row and a solid?
-                if (i - 1) / map.width as usize == i / map.width as usize
-                    && map.tiles[i - 1] == TileType::Platform
-                {
-                    // current tile is not end of row or next tile is solid
-                    if i as i32 % map.width != map.width - 1 as i32
-                        && map.tiles[i + 1] == TileType::Platform
-                    {
-                        Some(materials.tile_edge.clone())
-                    } else {
-                        Some(materials.tile_edge.clone())
-                    }
-                // previous tile was air or first tile in row
-                } else if (i - 1) / map.width as usize != i / map.width as usize
-                    || map.tiles[i - 1] != TileType::Platform
-                {
-                    // current tile is end of row
-                    if i as i32 % map.width == map.width - 1 as i32 {
-                        Some(materials.tile_edge.clone())
-                    // next tile is air
-                    } else if map.tiles[i + 1] != TileType::Platform {
-                        Some(materials.tile_edge.clone())
-                    } else {
-                        Some(materials.tile_edge.clone())
-                    }
-                } else {
-                    Some(materials.tile_edge.clone())
-                }
+                tile_size = Vec2::new(32., 12.);
+                Some(materials.tile_edge.clone())
             }
             TileType::Solid => {
                 // previous tile was same row and a solid?
@@ -108,18 +79,25 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
                 }
             }
         };
-        commands
-            .spawn_bundle(SpriteBundle {
-                material: material.unwrap(),
-                transform: Transform {
-                    translation: Vec3::new(pos.x, pos.y, 1.),
-                    scale: Vec3::new(sprite_scale, sprite_scale, 1.),
-                    ..Default::default()
-                },
+
+        let pos = map.tile_position(i as i32 % map.width, i as i32 / map.width);
+        let half_tile_size = tile_size / 2.0;
+        let mut entity = commands.spawn();
+
+        entity.insert_bundle(SpriteBundle {
+            material: material.unwrap(),
+            transform: Transform {
+                translation: Vec3::new(pos.x, pos.y, 1.),
+                scale: Vec3::new(sprite_scale, sprite_scale, 1.),
                 ..Default::default()
-            })
-            .insert(Collider::new(collider_center, collider_half))
-            .insert(Tile);
+            },
+            ..Default::default()
+        });
+        entity.insert(Tile);
+
+        if has_collider {
+            entity.insert(Collider::new(pos + half_tile_size, half_tile_size));
+        }
     }
 }
 
@@ -290,10 +268,10 @@ const DEFAULT_MAP: (&str, i32, i32) = (
 -------------#####------------------------------
 ---------------------====---------==------------
 -----------------------------###----------------
----------------#----##----#|------==------------
----------------#----------#|--------------------
----------------####====####|---#--==------------
---------------X------------|---#----------------
+---------------#----##----#-------==------------
+---------------#----------#---------------------
+---------------####====####----#--==------------
+--------------X----------------#----------------
 ----------###########################-----------
 ------------------------------------------------
 ----===---------------------------------===-----

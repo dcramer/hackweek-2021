@@ -74,19 +74,11 @@ pub struct RigidBody {
 
     pub scale: Vec3,
 
-    pub was_on_ground: bool,
-    pub on_ground: bool,
-
-    pub at_ceiling: bool,
-    pub was_at_ceiling: bool,
-
     pub on_platform: bool,
-
-    pub pushes_right_tile: bool,
-    pub pushed_right_tile: bool,
-    pub pushes_left_tile: bool,
-    pub pushed_left_tile: bool,
-    // pub aabb_offset: Vec2,
+    pub on_ground: bool,
+    pub at_ceiling: bool,
+    pub at_right_tile: bool,
+    pub at_left_tile: bool,
 }
 impl Default for RigidBody {
     fn default() -> Self {
@@ -96,16 +88,11 @@ impl Default for RigidBody {
             old_speed: Vec3::ZERO,
             speed: Vec3::ZERO,
             scale: Vec3::ZERO,
-            on_ground: false,
-            was_on_ground: false,
+            on_ground: true,
             at_ceiling: false,
-            was_at_ceiling: false,
             on_platform: false,
-            pushes_right_tile: false,
-            pushed_right_tile: false,
-            pushes_left_tile: false,
-            pushed_left_tile: false,
-            // aabb_offset: Vec2::ZERO,
+            at_right_tile: false,
+            at_left_tile: false,
         }
     }
 }

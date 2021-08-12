@@ -27,7 +27,7 @@ impl Plugin for PlayerPlugin {
 fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map: Res<Map>) {
     let spawn_pos = map.starting_positions[0];
     let transform = Transform {
-        translation: Vec3::new(spawn_pos.x, spawn_pos.y, 10.),
+        translation: Vec3::new(spawn_pos.x, spawn_pos.y + 1.0, 10.),
         scale: Vec3::new(1.5, 1.5, 1.),
         ..Default::default()
     };
@@ -44,8 +44,8 @@ fn player_spawn(mut commands: Commands, char_anim: Res<CharacterAnimation>, map:
         .insert_bundle(PlayerBundle::default())
         .insert(RigidBody::from_transform(transform))
         .insert(Collider::new(
-            Vec2::new(transform.translation.x + 12., transform.translation.y + 15.),
-            Vec2::new(12., 15.),
+            Vec2::new(transform.translation.x + 12., transform.translation.y + 14.),
+            Vec2::new(12., 14.),
         ));
 
     // spawn with default weapon
@@ -84,7 +84,7 @@ fn player_movement(
                     player.state = PlayerState::Walk;
                     return;
                 // if jump pressed
-                } else if kb.pressed(KeyCode::Space) {
+                } else if kb.pressed(KeyCode::Space) && !rigidbody.at_ceiling {
                     rigidbody.speed.y = player.jump_speed;
                     player.state = PlayerState::Jump;
                 // if drop pressed
@@ -103,7 +103,7 @@ fn player_movement(
                     rigidbody.speed = Vec3::ZERO;
                 // go right
                 } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
-                    if rigidbody.pushes_right_tile {
+                    if rigidbody.at_right_tile {
                         rigidbody.speed.x = 0.;
                     } else {
                         rigidbody.speed.x = speed.0.x;
@@ -112,7 +112,7 @@ fn player_movement(
                     player.facing = Direction::Right;
                 // go left
                 } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
-                    if rigidbody.pushes_left_tile {
+                    if rigidbody.at_left_tile {
                         rigidbody.speed.x = 0.;
                     } else {
                         rigidbody.speed.x = -speed.0.x;
@@ -126,7 +126,7 @@ fn player_movement(
                     }
                 }
                 // if theres no tile to walk on, fall
-                if kb.pressed(KeyCode::Space) {
+                if kb.pressed(KeyCode::Space) && !rigidbody.at_ceiling {
                     rigidbody.speed.y = player.jump_speed;
                     player.state = PlayerState::Jump;
                 } else if !rigidbody.on_ground {
@@ -139,7 +139,7 @@ fn player_movement(
                     rigidbody.speed.y = MAX_FALLING_SPEED;
                 }
 
-                if !kb.pressed(KeyCode::Space) && rigidbody.speed.y > 0. {
+                if rigidbody.at_ceiling || (!kb.pressed(KeyCode::Space) && rigidbody.speed.y > 0.) {
                     if rigidbody.speed.y > player.min_jump_speed {
                         rigidbody.speed.y = player.min_jump_speed;
                     }
@@ -152,7 +152,7 @@ fn player_movement(
                     rigidbody.speed.x = 0.;
                 // go right
                 } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
-                    if rigidbody.pushes_right_tile {
+                    if rigidbody.at_right_tile {
                         rigidbody.speed.x = 0.;
                     } else {
                         rigidbody.speed.x = speed.0.x;
@@ -161,7 +161,7 @@ fn player_movement(
                     player.facing = Direction::Right;
                 // go left
                 } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
-                    if rigidbody.pushes_left_tile {
+                    if rigidbody.at_left_tile {
                         rigidbody.speed.x = 0.;
                     } else {
                         rigidbody.speed.x = -speed.0.x;

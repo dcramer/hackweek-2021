@@ -241,72 +241,83 @@ fn detect_collisions(
 ) {
     // first we need to compile a list of changes (compute all the movements and collisions)
     // then we will apply them
-    for (mut rigidbody, rb_collider) in rb_query.iter_mut() {
-        rigidbody.old_position = rigidbody.position;
+    for (mut body, rb_collider) in rb_query.iter_mut() {
+        body.old_position = body.position;
 
-        rigidbody.position.x += rigidbody.speed.x * time.delta_seconds();
-        rigidbody.position.y += rigidbody.speed.y * time.delta_seconds();
+        body.position.x += body.speed.x * time.delta_seconds();
+        body.position.y += body.speed.y * time.delta_seconds();
 
         // dont compute collisions if we haven't moved
-        if rigidbody.old_position == rigidbody.position {
+        if body.old_position == body.position {
             continue;
         }
 
-        let delta = vec3_to_vec2(rigidbody.position - rigidbody.old_position);
+        let old_center = rb_collider.center;
+        let new_center = Vec2::new(
+            body.position.x + rb_collider.half.x,
+            body.position.y + rb_collider.half.y,
+        );
+
+        // gross - we mutate the collider later, but now we need an updated object to compute our offsets
+        let new_collider = Collider::new(new_center, rb_collider.half);
+
+        let delta = new_center - old_center;
         let mut nearest = Sweep::default();
-        nearest.pos = rb_collider.center + delta;
+        nearest.pos = new_center + delta;
         for collider in collider_query.iter().filter(|c| *c != rb_collider) {
-            let sweep = rb_collider.sweep(collider, delta);
+            let sweep = new_collider.sweep(collider, delta);
             if sweep.time < nearest.time {
                 nearest = sweep;
             }
         }
 
+        body.on_ground = false;
+        body.at_ceiling = false;
+        body.at_left_tile = false;
+        body.at_right_tile = false;
+
         if let Some(hit) = nearest.hit {
-            // println!(
-            //     "Collision traveling from {:?} to {:?} - hit {:?} @ speed {:?} - adjust to {:?}",
-            //     rigidbody.old_position,
-            //     rigidbody.position,
-            //     hit.collider.center,
-            //     rigidbody.speed,
-            //     hit.delta
-            // );
+            println!(
+                "Collision traveling from {:?} to {:?} - hit {:?} @ speed {:?} - adjust to {:?}",
+                body.old_position, body.position, hit.collider.center, body.speed, hit.delta
+            );
 
-            rigidbody.position.x += hit.delta.x;
-            rigidbody.position.y += hit.delta.y;
+            body.position.x += hit.delta.x;
+            body.position.y += hit.delta.y;
 
-            if (hit.delta.x < 0. && rigidbody.speed.x > 0.)
-                || (hit.normal.x > 0. && rigidbody.speed.x < 0.)
-            {
-                println!("collided with side tile");
-                rigidbody.speed.x = 0.;
+            if (hit.delta.x < 0. && body.speed.x > 0.) || (hit.delta.x > 0. && body.speed.x < 0.) {
+                info!("collided with side tile {:?}", hit.pos);
+                body.speed.x = 0.;
+                // body.at_left_tile = hit.delta.x > 0.;
+                // body.at_right_tile = hit.delta.x < 0.;
             }
-            if hit.delta.y > 0. && rigidbody.speed.y < 0. {
-                println!("collided with ground");
-                rigidbody.speed.y = 0.;
-                rigidbody.on_ground = true;
-            } else if hit.delta.y < 0. && rigidbody.speed.y > 0. {
-                println!("collided with ceiling");
-                rigidbody.speed.y = 0.;
+
+            if hit.delta.y > 0. && body.speed.y < 0. {
+                info!("collided with ground  {:?}", hit.pos);
+                body.speed.y = 0.;
+                body.on_ground = true;
             }
-        }
-        if rigidbody.speed.y > 0. {
-            rigidbody.on_ground = false;
+
+            if hit.delta.y < 0. && body.speed.y > 0. {
+                info!("collided with ceiling {:?}", hit.pos);
+                body.speed.y = -body.speed.y;
+                body.at_ceiling = true;
+            }
         }
     }
 }
 
 fn apply_movements(mut query: Query<(&mut Transform, &RigidBody, &mut Collider)>) {
-    for (mut transform, rigidbody, mut collider) in query.iter_mut() {
+    for (mut transform, body, mut collider) in query.iter_mut() {
         transform.translation = Vec3::new(
-            rigidbody.position.x.ceil(),
-            rigidbody.position.y.ceil(),
-            rigidbody.position.z.ceil(),
+            body.position.x.ceil(),
+            body.position.y.ceil(),
+            body.position.z.ceil(),
         );
-        transform.scale = Vec3::new(rigidbody.scale.x, rigidbody.scale.y, rigidbody.scale.z);
+        transform.scale = Vec3::new(body.scale.x, body.scale.y, body.scale.z);
 
-        collider.center.x = rigidbody.position.x + collider.half.x;
-        collider.center.y = rigidbody.position.y + collider.half.y;
+        collider.center.x = body.position.x + collider.half.x;
+        collider.center.y = body.position.y + collider.half.y;
     }
 }
 
