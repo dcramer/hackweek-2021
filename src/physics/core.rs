@@ -3,7 +3,10 @@
 use bevy::{core::FixedTimestep, prelude::*};
 
 // use crate::constants::PLATFORM_THRESHOLD;
-use crate::components::{Collider, RigidBody};
+use crate::{
+    components::{Collider, RigidBody},
+    constants::GRAVITY,
+};
 
 const EPSILON: f32 = 1e-8;
 
@@ -277,30 +280,25 @@ fn detect_collisions(
         body.at_right_tile = false;
 
         if let Some(hit) = nearest.hit {
-            println!(
-                "Collision traveling from {:?} to {:?} - hit {:?} @ speed {:?} - adjust to {:?}",
-                body.old_position, body.position, hit.collider.center, body.speed, hit.delta
-            );
-
             body.position.x += hit.delta.x;
             body.position.y += hit.delta.y;
 
             if (hit.delta.x < 0. && body.speed.x > 0.) || (hit.delta.x > 0. && body.speed.x < 0.) {
-                info!("collided with side tile {:?}", hit.pos);
+                info!("collided with side tile {:?} -> {:?}", hit.pos, hit.delta);
                 body.speed.x = 0.;
                 // body.at_left_tile = hit.delta.x > 0.;
                 // body.at_right_tile = hit.delta.x < 0.;
             }
 
             if hit.delta.y > 0. && body.speed.y < 0. {
-                info!("collided with ground  {:?}", hit.pos);
+                info!("collided with ground {:?} -> {:?}", hit.pos, hit.delta);
                 body.speed.y = 0.;
                 body.on_ground = true;
             }
 
             if hit.delta.y < 0. && body.speed.y > 0. {
                 info!("collided with ceiling {:?}", hit.pos);
-                body.speed.y = -body.speed.y;
+                body.speed.y = GRAVITY * time.delta_seconds();
                 body.at_ceiling = true;
             }
         }
