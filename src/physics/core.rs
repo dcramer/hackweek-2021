@@ -255,16 +255,25 @@ fn detect_collisions(
             continue;
         }
 
+        body.on_ground = false;
+        body.at_ceiling = false;
+        body.at_left_tile = false;
+        body.at_right_tile = false;
+
+        // HACK: we do Y first then X to deal w/ gravity
+        // https://gamedev.stackexchange.com/questions/55397/collision-detection-problems-using-aabbs
+        // this still doesnt quite fix it.. its still a bit choppy
+
         let old_center = rb_collider.center;
-        let new_center = Vec2::new(
+        let mut new_center = Vec2::new(
             body.position.x + rb_collider.half.x,
             body.position.y + rb_collider.half.y,
         );
 
         // gross - we mutate the collider later, but now we need an updated object to compute our offsets
-        let new_collider = Collider::new(new_center, rb_collider.half);
+        let mut new_collider = Collider::new(new_center, rb_collider.half);
 
-        let delta = new_center - old_center;
+        let mut delta = new_collider.center - old_center;
         let mut nearest = Sweep::default();
         nearest.pos = new_center + delta;
         for collider in collider_query.iter().filter(|c| *c != rb_collider) {
@@ -274,25 +283,14 @@ fn detect_collisions(
             }
         }
 
-        body.on_ground = false;
-        body.at_ceiling = false;
-        body.at_left_tile = false;
-        body.at_right_tile = false;
-
         if let Some(hit) = nearest.hit {
-            body.position.x += hit.delta.x;
-            body.position.y += hit.delta.y;
+            body.position.y += hit.delta.y + 1.0;
 
-            if (hit.delta.x < 0. && body.speed.x > 0.) || (hit.delta.x > 0. && body.speed.x < 0.) {
-                info!("collided with side tile {:?} -> {:?}", hit.pos, hit.delta);
-                body.speed.x = 0.;
-                // body.at_left_tile = hit.delta.x > 0.;
-                // body.at_right_tile = hit.delta.x < 0.;
-            }
-
-            if hit.delta.y > 0. && body.speed.y < 0. {
-                info!("collided with ground {:?} -> {:?}", hit.pos, hit.delta);
-                body.speed.y = 0.;
+            if hit.delta.y > 0. {
+                if body.speed.y < 0. {
+                    info!("collided with ground {:?} -> {:?}", hit.pos, hit.delta);
+                    body.speed.y = 0.;
+                }
                 body.on_ground = true;
             }
 
@@ -300,6 +298,34 @@ fn detect_collisions(
                 info!("collided with ceiling {:?}", hit.pos);
                 body.speed.y = GRAVITY * time.delta_seconds();
                 body.at_ceiling = true;
+            }
+        }
+
+        // old_center = new_center;
+        new_center = Vec2::new(
+            body.position.x + rb_collider.half.x,
+            body.position.y + rb_collider.half.y,
+        );
+        new_collider.center = new_center;
+
+        delta = new_center - old_center;
+        nearest = Sweep::default();
+        nearest.pos = new_center + delta;
+        for collider in collider_query.iter().filter(|c| *c != rb_collider) {
+            let sweep = new_collider.sweep(collider, delta);
+            if sweep.time < nearest.time {
+                nearest = sweep;
+            }
+        }
+
+        if let Some(hit) = nearest.hit {
+            body.position.x += hit.delta.x;
+
+            if (hit.delta.x < 0. && body.speed.x > 0.) || (hit.delta.x > 0. && body.speed.x < 0.) {
+                info!("collided with side tile {:?} -> {:?}", hit.pos, hit.delta);
+                body.speed.x = 0.;
+                body.at_left_tile = hit.delta.x > 0.;
+                body.at_right_tile = hit.delta.x < 0.;
             }
         }
     }
