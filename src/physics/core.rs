@@ -242,19 +242,17 @@ fn detect_collisions(
     // first we need to compile a list of changes (compute all the movements and collisions)
     // then we will apply them
     for (mut rigidbody, rb_collider) in rb_query.iter_mut() {
-        let new_position = Vec3::new(
-            rigidbody.position.x + rigidbody.speed.x * time.delta_seconds(),
-            rigidbody.position.y + rigidbody.speed.y * time.delta_seconds(),
-            rigidbody.position.z,
-        );
-
+        rigidbody.old_position = rigidbody.position;
         // dont compute collisions if we haven't moved
-        if rigidbody.position == new_position {
+
+        if rigidbody.position == rigidbody.position {
             continue;
         }
-        rigidbody.old_position = rigidbody.position;
 
-        let delta = vec3_to_vec2(new_position - rigidbody.position);
+        rigidbody.position.x += rigidbody.speed.x * time.delta_seconds();
+        rigidbody.position.y += rigidbody.speed.y * time.delta_seconds();
+
+        let delta = vec3_to_vec2(rigidbody.position - rigidbody.old_position);
         let mut nearest = Sweep::default();
         nearest.pos = rb_collider.center + delta;
         for collider in collider_query.iter().filter(|c| *c != rb_collider) {
@@ -274,8 +272,8 @@ fn detect_collisions(
             //     hit.delta
             // );
 
-            rigidbody.position.x += hit.delta.x + hit.normal.x;
-            rigidbody.position.y += hit.delta.y + hit.normal.y;
+            rigidbody.position.x += hit.delta.x;
+            rigidbody.position.y += hit.delta.y;
 
             if (hit.delta.x < 0. && rigidbody.speed.x > 0.)
                 || (hit.normal.x > 0. && rigidbody.speed.x < 0.)
@@ -291,8 +289,6 @@ fn detect_collisions(
                 println!("collided with ceiling");
                 rigidbody.speed.y = 0.;
             }
-        } else {
-            rigidbody.position = new_position;
         }
 
         if rigidbody.speed.y >= 0. {
