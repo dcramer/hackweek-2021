@@ -32,15 +32,15 @@ fn player_spawn(
 ) {
     let spawn_pos = map.starting_positions[0];
     let transform = Transform {
-        translation: Vec3::new(spawn_pos.x, spawn_pos.y + 1., 10.),
-        scale: Vec3::new(1.5, 1.5, 1.),
+        translation: Vec3::new(spawn_pos.x, spawn_pos.y, 10.),
+        scale: Vec3::new(1., 1., 1.),
         ..Default::default()
     };
 
     println!("Spawning player at {}, {}", spawn_pos.x, spawn_pos.y);
     commands
         .spawn_bundle(SpriteBundle {
-            material: materials.blue.clone(),
+            material: char_anim.idle_f0.clone(),
             // sprite is 16x20
             // scaled to 24x30
             transform,
@@ -51,7 +51,7 @@ fn player_spawn(
         .insert(RigidBody::from_transform(transform))
         .insert(Collider::from_position(
             transform.translation,
-            Vec2::new(8., 15.),
+            Vec2::new(8., 10.),
         ));
 
     // spawn with default weapon

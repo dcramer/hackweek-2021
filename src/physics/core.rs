@@ -1,47 +1,22 @@
 // based on http://noonat.github.io/intersect/
 
-use bevy::{core::FixedTimestep, prelude::*};
+use bevy::prelude::*;
 
 // use crate::constants::PLATFORM_THRESHOLD;
-use crate::{
-    components::{Collider, RigidBody},
-    constants::GRAVITY,
-};
+use crate::components::Collider;
 
 const EPSILON: f32 = 1e-8;
 
-fn vec3_to_vec2(v3: Vec3) -> Vec2 {
-    Vec2::new(v3.x, v3.y)
-}
-
-pub struct PhysicsPlugin;
-
-impl Plugin for PhysicsPlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app.add_system_set(
-            SystemSet::new()
-                .with_run_criteria(FixedTimestep::step(1.0 / 60.))
-                .with_system(detect_collisions.system().label("detect collisions"))
-                .with_system(
-                    apply_movements
-                        .system()
-                        .label("apply movements")
-                        .after("detect collisions"),
-                ),
-        );
-    }
-}
-
 pub struct Hit<'a> {
-    collider: &'a Collider,
+    pub collider: &'a Collider,
     /// the point of contact between the two objects (or an estimation of it, in some sweep tests).
-    pos: Vec2,
+    pub pos: Vec2,
     /// the overlap between the two objects, and is a vector that can be added to the colliding object’s position to move it back to a non-colliding state.
-    delta: Vec2,
+    pub delta: Vec2,
     /// the surface normal at the point of contact.
-    normal: Vec2,
+    pub normal: Vec2,
     /// defined for segment and sweep intersections, and is a fraction from 0 to 1 indicating how far along the line the collision occurred. (This is the tt value for the line equation L(t) = A + t(B - A)L(t)=A+t(B−A))
-    time: f32,
+    pub time: f32,
 }
 impl<'a> Hit<'a> {
     pub fn new(collider: &'a Collider) -> Self {
@@ -57,11 +32,11 @@ impl<'a> Hit<'a> {
 
 pub struct Sweep<'a> {
     /// Hit object if there was a collision, or null if not.
-    hit: Option<Hit<'a>>,
+    pub hit: Option<Hit<'a>>,
     /// the furthest point the object reached along the swept path before it hit something.
-    pos: Vec2,
+    pub pos: Vec2,
     /// a copy of hit.time, offset by epsilon, or 1.0 if the object didn’t hit anything during the sweep.
-    time: f32,
+    pub time: f32,
 }
 
 impl<'a> Default for Sweep<'a> {
@@ -78,13 +53,13 @@ impl<'a> Default for Sweep<'a> {
 impl Collider {
     /// detect an intersection with point
     pub fn intersect_point<'a>(&'a self, pos: Vec2) -> Option<Hit<'a>> {
-        let dx = pos.x - self.center.x;
+        let dx = pos.x - self.pos.x;
         let px = self.half.x - dx.abs();
         if px <= 0. {
             return None;
         }
 
-        let dy = pos.y - self.center.y;
+        let dy = pos.y - self.pos.y;
         let py = self.half.y - dy.abs();
         if py <= 0. {
             return None;
@@ -95,14 +70,14 @@ impl Collider {
             let sx = dx.signum();
             hit.delta.x = px * sx;
             hit.normal.x = sx;
-            hit.pos.x = self.center.x + (self.half.x * sx);
+            hit.pos.x = self.pos.x + (self.half.x * sx);
             hit.pos.y = pos.y;
         } else {
             let sy = dy.signum();
             hit.delta.y = py * sy;
             hit.normal.y = sy;
             hit.pos.x = pos.x;
-            hit.pos.y = self.center.y + (self.half.y * sy);
+            hit.pos.y = self.pos.y + (self.half.y * sy);
         }
         Some(hit)
     }
@@ -119,10 +94,10 @@ impl Collider {
         let scale_y = 1. / delta.y;
         let sign_x = scale_x.signum();
         let sign_y = scale_y.signum();
-        let near_time_x = (self.center.x - sign_x * (self.half.x + padding_x) - pos.x) * scale_x;
-        let near_time_y = (self.center.y - sign_y * (self.half.y + padding_y) - pos.y) * scale_y;
-        let far_time_x = (self.center.x + sign_x * (self.half.x + padding_x) - pos.x) * scale_x;
-        let far_time_y = (self.center.y + sign_y * (self.half.y + padding_y) - pos.y) * scale_y;
+        let near_time_x = (self.pos.x - sign_x * (self.half.x + padding_x) - pos.x) * scale_x;
+        let near_time_y = (self.pos.y - sign_y * (self.half.y + padding_y) - pos.y) * scale_y;
+        let far_time_x = (self.pos.x + sign_x * (self.half.x + padding_x) - pos.x) * scale_x;
+        let far_time_y = (self.pos.y + sign_y * (self.half.y + padding_y) - pos.y) * scale_y;
 
         if near_time_x > far_time_y || near_time_y > far_time_x {
             return None;
@@ -161,14 +136,14 @@ impl Collider {
 
     /// detect an intersection with a static collider
     fn intersect<'a, 'b>(&'a self, other: &'b Collider) -> Option<Hit<'a>> {
-        let dx = other.center.x - self.center.x;
+        let dx = other.pos.x - self.pos.x;
         let px = (other.half.x + self.half.x) - dx.abs();
         if px <= 0. {
             return None;
         }
 
-        let dy = other.center.y - self.center.y;
-        let py = (other.half.y + self.center.y) - dy.abs();
+        let dy = other.pos.y - self.pos.y;
+        let py = (other.half.y + self.pos.y) - dy.abs();
         if py <= 0. {
             return None;
         }
@@ -178,14 +153,14 @@ impl Collider {
             let sx = dx.signum();
             hit.delta.x = px * sx;
             hit.normal.x = sx;
-            hit.pos.x = self.center.x + (self.half.x * sx);
-            hit.pos.y = other.center.y;
+            hit.pos.x = self.pos.x + (self.half.x * sx);
+            hit.pos.y = other.pos.y;
         } else {
             let sy = dy.signum();
             hit.delta.y = py * sy;
             hit.normal.y = sy;
-            hit.pos.x = other.center.x;
-            hit.pos.y = self.center.y + (self.half.y * sy);
+            hit.pos.x = other.pos.x;
+            hit.pos.y = self.pos.y + (self.half.y * sy);
         }
         Some(hit)
     }
@@ -198,8 +173,8 @@ impl Collider {
         let mut sweep = Sweep::default();
 
         if delta.x == 0. && delta.y == 0. {
-            sweep.pos.x = other.center.x;
-            sweep.pos.y = other.center.y;
+            sweep.pos.x = other.pos.x;
+            sweep.pos.y = other.pos.y;
             if let Some(mut hit) = self.intersect(other) {
                 hit.time = 0.;
                 sweep.time = hit.time;
@@ -210,12 +185,11 @@ impl Collider {
             return sweep;
         }
 
-        sweep.pos.x = other.center.x + delta.x;
-        sweep.pos.y = other.center.y + delta.y;
+        sweep.pos.x = other.pos.x + delta.x;
+        sweep.pos.y = other.pos.y + delta.y;
         sweep.time = 1.;
 
-        if let Some(mut hit) =
-            self.intersect_segment(other.center, delta, other.half.x, other.half.y)
+        if let Some(mut hit) = self.intersect_segment(other.pos, delta, other.half.x, other.half.y)
         {
             // TODO: all this behavior is weird idk what im doing.. really only using the top-only collider
             if delta.x < 0. && !self.left {
@@ -228,14 +202,14 @@ impl Collider {
                 return sweep;
             }
             sweep.time = (hit.time - EPSILON).clamp(0., 1.);
-            sweep.pos.x = other.center.x + delta.x * sweep.time;
-            sweep.pos.y = other.center.y + delta.y * sweep.time;
+            sweep.pos.x = other.pos.x + delta.x * sweep.time;
+            sweep.pos.y = other.pos.y + delta.y * sweep.time;
             let direction = delta.clone();
             direction.normalize();
             hit.pos.x = (hit.pos.x + direction.x * other.half.x)
-                .clamp(self.center.x - self.half.x, self.center.x + self.half.x);
+                .clamp(self.pos.x - self.half.x, self.pos.x + self.half.x);
             hit.pos.y = (hit.pos.y + direction.y * other.half.y)
-                .clamp(self.center.y - self.half.y, self.center.y + self.half.y);
+                .clamp(self.pos.y - self.half.y, self.pos.y + self.half.y);
             sweep.hit = Some(hit);
         }
         sweep
@@ -247,7 +221,7 @@ impl Collider {
         delta: Vec2,
     ) -> Sweep<'b> {
         let mut nearest = Sweep::default();
-        nearest.pos = self.center + delta;
+        nearest.pos = self.pos + delta;
         for collider in collider_iter {
             let sweep = collider.sweep(self, delta);
             if sweep.time < nearest.time {
@@ -255,109 +229,6 @@ impl Collider {
             }
         }
         nearest
-    }
-}
-
-fn detect_collisions(
-    collider_query: Query<(Entity, &Collider)>,
-    mut rb_query: Query<(Entity, &mut RigidBody, &Collider)>,
-    time: Res<Time>,
-) {
-    // first we need to compile a list of changes (compute all the movements and collisions)
-    // then we will apply them
-    for (entity, mut body, rb_collider) in rb_query.iter_mut() {
-        let was_on_ground = body.on_ground;
-
-        let delta = Vec2::new(
-            body.speed.x * time.delta_seconds(),
-            body.speed.y * time.delta_seconds(),
-        )
-        .round();
-
-        body.old_position = body.position;
-        body.position.x += delta.x;
-        body.position.y += delta.y;
-        body.position = body.position.round();
-
-        // dont compute collisions if we haven't moved
-        if body.old_position == body.position {
-            continue;
-        }
-
-        let mut new_collider = Collider::from_position(body.position, rb_collider.half);
-
-        // update known knowns based on velocity
-        // if body.speed.y < 0. || body.speed.y > 0. {
-        //     println!("off ground1");
-        //     body.on_ground = false;
-        // }
-        if body.speed.y < 0. {
-            body.at_ceiling = false;
-        }
-        if body.speed.x > 0. {
-            body.at_left_tile = false;
-        }
-        if body.speed.x < 0. {
-            body.at_right_tile = false;
-        }
-
-        let nearest = new_collider.sweep_into(
-            collider_query
-                .iter()
-                .filter(|(e, _)| *e != entity)
-                .map(|(_, c)| c),
-            delta,
-        );
-        if let Some(hit) = nearest.hit {
-            // TODO: this math isnt precise
-            // - sometimes it pushes you up from the ground (vs on top of the collider)
-            // - it still has floating errors, so its never even "on top" of the collider
-            // - we hit left/right tiles (toe stubbing) with gravity and it causes movements that are not desired
-
-            body.position.x += hit.delta.x;
-            body.position.y += hit.delta.y;
-            body.position = body.position.round();
-            new_collider.center_from(body.position);
-
-            if (hit.delta.x < 0. && body.speed.x > 0.) || (hit.delta.x > 0. && body.speed.x < 0.) {
-                body.speed.x = 0.;
-                // body.at_left_tile = hit.delta.x > 0.;
-                // body.at_right_tile = hit.delta.x < 0.;
-            }
-
-            if hit.delta.y > 0. {
-                body.speed.y = 0.;
-                body.on_ground = true;
-            }
-
-            if hit.delta.y < 0. && body.speed.y > 0. {
-                body.speed.y = GRAVITY * time.delta_seconds();
-                body.on_ground = false;
-                body.at_ceiling = true;
-            }
-        }
-
-        // now we need to test if we're still.. on the ground. is there a better way to do this??
-        if was_on_ground && body.on_ground {
-            let delta = Vec2::new(0., -2.0);
-            let nearest = new_collider.sweep_into(
-                collider_query
-                    .iter()
-                    .filter(|(e, _)| *e != entity)
-                    .map(|(_, c)| c),
-                delta,
-            );
-            body.on_ground = nearest.hit.is_some();
-        }
-    }
-}
-
-fn apply_movements(mut query: Query<(&mut Transform, &RigidBody, &mut Collider)>) {
-    for (mut transform, body, mut collider) in query.iter_mut() {
-        transform.translation = Vec3::new(body.position.x, body.position.y, body.position.z);
-        transform.scale = Vec3::new(body.scale.x, body.scale.y, body.scale.z);
-
-        collider.center_from(body.position);
     }
 }
 
@@ -516,8 +387,8 @@ mod tests {
         let sweep = collider1.sweep(&collider2, delta);
         assert_eq!(sweep.hit.is_none(), true);
         assert_eq!(sweep.time, 1.);
-        assert_eq!(sweep.pos.x, collider2.center.x + delta.x);
-        assert_eq!(sweep.pos.y, collider2.center.y + delta.y);
+        assert_eq!(sweep.pos.x, collider2.pos.x + delta.x);
+        assert_eq!(sweep.pos.y, collider2.pos.y + delta.y);
     }
 
     #[test]
@@ -584,8 +455,9 @@ mod tests {
     fn test_horizontal_movement_no_gravity() {
         let half = Vec2::new(16., 16.);
         // start at the "left most" tile, with a vertical offset to prevent ground collision
-        let actor = Collider::new(Vec2::new(16., 17.), half);
+        let actor = Collider::new(Vec2::new(0., 17.), half);
 
+        // flat line, no gaps, left to right (effectively starting at -16px)
         let colliders = vec![
             Collider::new(Vec2::ZERO, half),
             Collider::new(Vec2::new(16., 0.), half),

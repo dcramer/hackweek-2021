@@ -107,9 +107,9 @@ impl RigidBody {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Collider {
-    pub center: Vec2,
+    pub pos: Vec2,
     pub half: Vec2,
 
     pub top: bool,
@@ -118,27 +118,27 @@ pub struct Collider {
     pub right: bool,
 }
 impl Collider {
-    pub fn new(center: Vec2, half: Vec2) -> Self {
+    pub fn new(pos: Vec2, half: Vec2) -> Self {
         Self {
-            center,
+            pos,
             half,
             ..Default::default()
         }
     }
 
     pub fn from_position(pos: Vec3, half: Vec2) -> Self {
-        Self::new(Vec2::new(pos.x + half.x, pos.y + half.y), half)
+        Self::new(Vec2::new(pos.x, pos.y), half)
     }
 
-    pub fn center_from(&mut self, pos: Vec3) {
-        self.center.x = pos.x + self.half.x;
-        self.center.y = pos.y + self.half.y;
+    pub fn update(&mut self, pos: Vec3) {
+        self.pos.x = pos.x;
+        self.pos.y = pos.y;
     }
 }
 impl Default for Collider {
     fn default() -> Self {
         Self {
-            center: Vec2::ZERO,
+            pos: Vec2::ZERO,
             half: Vec2::ZERO,
             top: true,
             bottom: true,

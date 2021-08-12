@@ -23,10 +23,10 @@ fn main() {
             ..Default::default()
         })
         .add_plugins(DefaultPlugins)
-        .add_plugin(PlayerPlugin)
-        .add_plugin(MapPlugin)
         .add_plugin(PhysicsPlugin)
         // .add_plugin(DebugPhysicsPlugin)
+        .add_plugin(PlayerPlugin)
+        .add_plugin(MapPlugin)
         .add_startup_system(setup.system())
         .run();
 }
