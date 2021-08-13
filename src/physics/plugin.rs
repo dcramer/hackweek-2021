@@ -38,6 +38,8 @@ fn detect_collisions(
     // then we will apply them
     for (entity, mut body, rb_collider) in rb_query.iter_mut() {
         let was_on_ground = body.on_ground;
+        let was_at_left_tile = body.at_left_tile;
+        let was_at_right_tile = body.at_right_tile;
 
         let delta = Vec2::new(
             body.speed.x * time.delta_seconds(),
@@ -62,15 +64,15 @@ fn detect_collisions(
         //     println!("off ground1");
         //     body.on_ground = false;
         // }
-        if body.speed.y < 0. {
-            body.at_ceiling = false;
-        }
-        if body.speed.x > 0. {
-            body.at_left_tile = false;
-        }
-        if body.speed.x < 0. {
-            body.at_right_tile = false;
-        }
+        // if body.speed.y < 0. {
+        //     body.at_ceiling = false;
+        // }
+        // if body.speed.x > 0. {
+        //     body.at_left_tile = false;
+        // }
+        // if body.speed.x < 0. {
+        //     body.at_right_tile = false;
+        // }
 
         let nearest = new_collider.sweep_into(
             collider_query
@@ -91,9 +93,10 @@ fn detect_collisions(
             new_collider.update(body.position);
 
             if (hit.delta.x < 0. && body.speed.x > 0.) || (hit.delta.x > 0. && body.speed.x < 0.) {
+                println!("side collision {:?}", hit.delta);
                 body.speed.x = 0.;
                 // body.at_left_tile = hit.delta.x > 0.;
-                // body.at_right_tile = hit.delta.x < 0.;
+                body.at_right_tile = hit.delta.x < 0.;
             }
 
             if hit.delta.y > 0. {
@@ -104,7 +107,7 @@ fn detect_collisions(
             if hit.delta.y < 0. && body.speed.y > 0. {
                 body.speed.y = GRAVITY * time.delta_seconds();
                 body.on_ground = false;
-                body.at_ceiling = true;
+                // body.at_ceiling = true;
             }
 
             ev_collision.send(CollisionEvent {
@@ -125,6 +128,35 @@ fn detect_collisions(
             );
             body.on_ground = nearest.hit.is_some();
         }
+
+        if was_at_right_tile && body.at_right_tile {
+            let delta = Vec2::new(2., 0.0);
+            let nearest = new_collider.sweep_into(
+                collider_query
+                    .iter()
+                    .filter(|(e, _)| *e != entity)
+                    .map(|(_, c)| c),
+                delta,
+            );
+            body.at_right_tile = nearest.hit.is_some();
+        }
+
+        if was_at_left_tile && body.at_left_tile {
+            let delta = Vec2::new(-2., 0.0);
+            let nearest = new_collider.sweep_into(
+                collider_query
+                    .iter()
+                    .filter(|(e, _)| *e != entity)
+                    .map(|(_, c)| c),
+                delta,
+            );
+            body.at_left_tile = nearest.hit.is_some();
+        }
+
+        println!(
+            "ground? left? right? {:?} {:?} {:?}",
+            body.on_ground, body.at_left_tile, body.at_right_tile
+        );
     }
 }
 
