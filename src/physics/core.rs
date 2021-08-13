@@ -452,10 +452,10 @@ mod tests {
 
     // XXX: I can't seem to debug math at all (bad brain) so lets write tests to check character movement
     #[test]
-    fn test_horizontal_movement_no_gravity() {
+    fn test_movement_no_gravity() {
         let half = Vec2::new(16., 16.);
         // start at the "left most" tile, with a vertical offset to prevent ground collision
-        let actor = Collider::new(Vec2::new(0., 17.), half);
+        let actor = Collider::new(Vec2::new(0., 33.), half);
 
         // flat line, no gaps, left to right (effectively starting at -16px)
         let colliders = vec![
@@ -477,5 +477,26 @@ mod tests {
         let nearest = actor.sweep_into(colliders.iter(), delta);
         // assert_eq!(nearest.time, 1.);
         assert_eq!(nearest.hit.is_some(), true);
+        let hit = nearest.hit.unwrap();
+        assert_eq!(hit.delta.x, 0.);
+        assert_eq!(hit.delta.y, 1.);
+
+        let half = Vec2::new(16., 16.);
+        // start at the "left most" tile, with a vertical offset to prevent ground collision
+        let actor = Collider::new(Vec2::new(0., 63.), half);
+
+        // flat line, no gaps, left to right (effectively starting at -16px)
+        let colliders = vec![
+            Collider::new(Vec2::ZERO, half),
+            // Collider::new(Vec2::new(16., 0.), half),
+            // Collider::new(Vec2::new(48., 0.), half),
+        ];
+        let delta = Vec2::new(0., -32.);
+        let nearest = actor.sweep_into(colliders.iter(), delta);
+        // assert_eq!(nearest.time, 1.);
+        assert_eq!(nearest.hit.is_some(), true);
+        let hit = nearest.hit.unwrap();
+        assert_eq!(hit.delta.x, 0.);
+        assert_eq!(hit.delta.y, 1.);
     }
 }
