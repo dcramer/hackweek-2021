@@ -6,8 +6,8 @@ use crate::{
 };
 
 use super::{
+    events::tile_collision_listener,
     generator::{build_default_map, TileType},
-    tiles::tile_collision_listener,
     Map,
 };
 
