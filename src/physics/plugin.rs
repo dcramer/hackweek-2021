@@ -37,15 +37,7 @@ fn detect_collisions(
     // first we need to compile a list of changes (compute all the movements and collisions)
     // then we will apply them
     for (entity, mut body, rb_collider) in rb_query.iter_mut() {
-        let was_on_ground = body.on_ground;
-        let was_at_left_tile = body.at_left_tile;
-        let was_at_right_tile = body.at_right_tile;
-
-        let delta = Vec2::new(
-            body.speed.x * time.delta_seconds(),
-            body.speed.y * time.delta_seconds(),
-        )
-        .round();
+        let delta = Vec2::from(body.speed * time.delta_seconds()).round();
 
         body.old_position = body.position;
         body.position.x += delta.x;
@@ -56,6 +48,10 @@ fn detect_collisions(
         if body.old_position == body.position {
             continue;
         }
+        let was_on_ground = body.on_ground;
+        let was_at_left_tile = body.at_left_tile;
+        let was_at_right_tile = body.at_right_tile;
+        let was_at_ceiling = body.at_ceiling;
 
         let mut new_collider = Collider::from_position(body.position, rb_collider.half);
 
@@ -85,29 +81,17 @@ fn detect_collisions(
             // TODO: this math isnt precise
             // - sometimes it pushes you up from the ground (vs on top of the collider)
             // - it still has floating errors, so its never even "on top" of the collider
-            // - we hit left/right tiles (toe stubbing) with gravity and it causes movements that are not desired
 
             body.position.x += hit.delta.x;
             body.position.y += hit.delta.y;
             body.position = body.position.round();
             new_collider.update(body.position);
 
-            if (hit.delta.x < 0. && body.speed.x > 0.) || (hit.delta.x > 0. && body.speed.x < 0.) {
-                println!("side collision {:?}", hit.delta);
-                body.speed.x = 0.;
-                // body.at_left_tile = hit.delta.x > 0.;
-                body.at_right_tile = hit.delta.x < 0.;
-            }
-
-            if hit.delta.y > 0. {
-                body.speed.y = 0.;
-                body.on_ground = true;
-            }
-
-            if hit.delta.y < 0. && body.speed.y > 0. {
-                body.speed.y = GRAVITY * time.delta_seconds();
-                body.on_ground = false;
-                // body.at_ceiling = true;
+            body.at_left_tile = hit.delta.x > 0.;
+            body.at_right_tile = hit.delta.x < 0.;
+            if !body.at_right_tile && !body.at_left_tile {
+                body.on_ground = hit.delta.y > 0.;
+                body.at_ceiling = hit.delta.y < 0.;
             }
 
             ev_collision.send(CollisionEvent {
@@ -117,6 +101,19 @@ fn detect_collisions(
         }
 
         // now we need to test if we're still.. on the ground. is there a better way to do this??
+
+        if was_at_ceiling && body.at_ceiling {
+            let delta = Vec2::new(0., 2.0);
+            let nearest = new_collider.sweep_into(
+                collider_query
+                    .iter()
+                    .filter(|(e, _)| *e != entity)
+                    .map(|(_, c)| c),
+                delta,
+            );
+            body.at_ceiling = nearest.hit.is_some();
+        }
+
         if was_on_ground && body.on_ground {
             let delta = Vec2::new(0., -2.0);
             let nearest = new_collider.sweep_into(
@@ -153,10 +150,17 @@ fn detect_collisions(
             body.at_left_tile = nearest.hit.is_some();
         }
 
-        println!(
-            "ground? left? right? {:?} {:?} {:?}",
-            body.on_ground, body.at_left_tile, body.at_right_tile
-        );
+        if body.at_left_tile || body.at_right_tile {
+            body.speed.x = 0.;
+        }
+
+        if body.on_ground && body.speed.y < 0. {
+            body.speed.y = 0.;
+        }
+
+        if body.at_ceiling && body.speed.y > 0. {
+            body.speed.y = 0.;
+        }
     }
 }
 
