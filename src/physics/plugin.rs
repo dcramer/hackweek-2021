@@ -3,10 +3,7 @@
 use bevy::{core::FixedTimestep, prelude::*};
 
 // use crate::constants::PLATFORM_THRESHOLD;
-use crate::{
-    components::{Collider, RigidBody},
-    constants::GRAVITY,
-};
+use crate::components::{Collider, RigidBody};
 
 use super::events::CollisionEvent;
 
@@ -82,6 +79,7 @@ fn detect_collisions(
             // - sometimes it pushes you up from the ground (vs on top of the collider)
             // - it still has floating errors, so its never even "on top" of the collider
 
+            // it SEEMS like the delta is _off_ by roughly the size of _half_ but everythings computed from same relative positions.. so how?
             body.position.x += hit.delta.x;
             body.position.y += hit.delta.y;
             body.position = body.position.round();
@@ -115,7 +113,7 @@ fn detect_collisions(
         }
 
         if was_on_ground && body.on_ground {
-            let delta = Vec2::new(0., -2.0);
+            let delta = Vec2::new(0., -1.0);
             let nearest = new_collider.sweep_into(
                 collider_query
                     .iter()
@@ -160,6 +158,13 @@ fn detect_collisions(
 
         if body.at_ceiling && body.speed.y > 0. {
             body.speed.y = 0.;
+        }
+
+        if was_on_ground != body.on_ground {
+            println!(
+                "ground: {:?} -> {:?} ({:?}",
+                was_on_ground, body.on_ground, delta
+            );
         }
     }
 }
