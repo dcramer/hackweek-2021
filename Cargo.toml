@@ -1,9 +1,14 @@
 [package]
 name = "hackweek-2021"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
+
+[workspace]
 resolver = "2"
 
 [dependencies]
 bevy = "0.9.1"
 rand = "0.7.2"
+
+[profile.dev]
+opt-level = 1
