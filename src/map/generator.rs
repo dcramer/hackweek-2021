@@ -1,7 +1,3 @@
-use crate::{
-    components::{Collider, Tile},
-    resources::Materials,
-};
 use bevy::prelude::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -13,6 +9,7 @@ pub enum TileType {
     Lava,
 }
 
+#[derive(Resource)]
 pub struct Map {
     pub position: Vec3,
 
@@ -44,7 +41,7 @@ impl Map {
             width,
             height,
             tiles: vec![TileType::Empty; (width * height) as usize],
-            ..Default::default()
+            ..default()
         }
     }
 
@@ -54,7 +51,7 @@ impl Map {
             width,
             height,
             tiles: vec![TileType::Empty; (width * height) as usize],
-            ..Default::default()
+            ..default()
         }
     }
 

@@ -7,47 +7,42 @@ use crate::{
     },
     constants::{GRAVITY, MAX_FALLING_SPEED, PLATFORM_THRESHOLD, SPRITE_SCALE},
     map::Map,
-    resources::{CharacterAnimation, Materials, WinSize},
+    resources::WinSize,
 };
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_stage(
-            "game_setup_actors",
-            SystemStage::single(player_spawn.system()),
-        )
-        .add_system(player_movement.system())
-        .add_system(projectile_movement.system())
-        .add_system(player_attack.system());
+    fn build(&self, app: &mut App) {
+        app.add_startup_stage("game_setup_actors", SystemStage::single(player_spawn))
+            .add_system(player_movement)
+            .add_system(projectile_movement)
+            .add_system(player_attack);
     }
 }
 
-fn player_spawn(
-    mut commands: Commands,
-    materials: Res<Materials>,
-    char_anim: Res<CharacterAnimation>,
-    map: Res<Map>,
-) {
+fn player_spawn(mut commands: Commands, map: Res<Map>, asset_server: Res<AssetServer>) {
     let spawn_pos = map.starting_positions[0];
     let transform = Transform {
         translation: Vec3::new(spawn_pos.x, spawn_pos.y, 10.),
         scale: Vec3::new(1., 1., 1.),
-        ..Default::default()
+        ..default()
     };
 
     println!("Spawning player at {}, {}", spawn_pos.x, spawn_pos.y);
     commands
-        .spawn_bundle(SpriteBundle {
-            material: char_anim.idle_f0.clone(),
+        .spawn(SpriteBundle {
+            texture: asset_server.load("anim/idle/knight_m_idle_anim_f0.png"),
             // sprite is 16x20
             // scaled to 24x30
             transform,
-            sprite: Sprite::new(Vec2::new(16., 20.)),
-            ..Default::default()
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(16., 20.)),
+                ..default()
+            },
+            ..default()
         })
-        .insert_bundle(PlayerBundle::default())
+        .insert(PlayerBundle::default())
         .insert(RigidBody::from_transform(transform))
         .insert(Collider::from_position(
             transform.translation,
@@ -56,14 +51,14 @@ fn player_spawn(
 
     // spawn with default weapon
     // commands
-    //     .spawn_bundle(SpriteBundle {
+    //     .spawn(SpriteBundle {
     //         material: materials.weapon_bow.clone(),
     //         transform: Transform {
     //             translation: Vec3::new(8.0, bottom + 75.0 / 4.0 + 10.0, EQUIPMENT_LAYER),
     //             scale: Vec3::new(1.5, 1.5, 1.0),
-    //             ..Default::default()
+    //             ..default()
     //         },
-    //         ..Default::default()
+    //         ..default()
     //     })
     //     .insert(Weapon);
 }
@@ -73,7 +68,7 @@ fn player_movement(
     time: Res<Time>,
     mut query: Query<(&Speed, &mut Player, &mut RigidBody, With<Player>)>,
 ) {
-    if let Ok((speed, mut player, mut rigidbody, _)) = query.single_mut() {
+    if let (speed, mut player, mut rigidbody, _) = query.single_mut() {
         match player.state {
             PlayerState::Stand => {
                 rigidbody.speed = Vec3::ZERO;
@@ -195,16 +190,16 @@ fn player_movement(
 fn player_attack(
     mut commands: Commands,
     kb: Res<Input<KeyCode>>,
-    materials: Res<Materials>,
     mut query: Query<(&Transform, &mut PlayerReadyAttack, &Player, With<Player>)>,
+    asset_server: Res<AssetServer>,
 ) {
-    if let Ok((player_tf, mut ready_attack, player, _)) = query.single_mut() {
+    if let (player_tf, mut ready_attack, player, _) = query.single_mut() {
         if ready_attack.0 && kb.pressed(KeyCode::Return) {
             let x = player_tf.translation.x;
             let y = player_tf.translation.y;
             commands
-                .spawn_bundle(SpriteBundle {
-                    material: materials.projectile.clone(),
+                .spawn(SpriteBundle {
+                    texture: asset_server.load("bullet.png"),
                     transform: Transform {
                         translation: Vec3::new(x, y, 1.),
                         scale: Vec3::new(
@@ -217,9 +212,9 @@ fn player_attack(
                             SPRITE_SCALE / 2.0,
                             1.,
                         ),
-                        ..Default::default()
+                        ..default()
                     },
-                    ..Default::default()
+                    ..default()
                 })
                 .insert(Projectile {
                     direction: player.facing,

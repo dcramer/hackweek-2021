@@ -1,12 +1,14 @@
 // Based on: https://gamedevelopment.tutsplus.com/tutorials/basic-2d-platformer-physics-part-2--cms-25922
 
-use bevy::{core::FixedTimestep, prelude::*};
+use bevy::{prelude::*, time::FixedTimestep};
 
 // use crate::constants::PLATFORM_THRESHOLD;
 use crate::components::Collider;
 
+#[derive(Component)]
 pub struct HasDebugCollider;
 
+#[derive(Resource)]
 pub struct ColliderMaterials {
     collider_border: Handle<ColorMaterial>,
 }
@@ -14,15 +16,14 @@ pub struct ColliderMaterials {
 pub struct DebugPhysicsPlugin;
 
 impl Plugin for DebugPhysicsPlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(setup_debugger.system())
-            //.add_system(insert_debug_colliders.system())
+    fn build(&self, app: &mut App) {
+        app.add_startup_system(setup_debugger)
+            //.add_system(insert_debug_colliders)
             .add_system_set(
                 SystemSet::new()
                     .with_run_criteria(FixedTimestep::step(1.0 / 30.))
                     .with_system(
                         debug_colliders
-                            .system()
                             .label("debug colliders")
                             .after("apply movements"),
                     ),
@@ -64,8 +65,7 @@ fn debug_colliders(
             .insert(HasDebugCollider)
             .with_children(|parent| {
                 // top
-                parent.spawn_bundle(SpriteBundle {
-                    material: materials.collider_border.clone(),
+                parent.spawn(SpriteBundle {
                     transform: Transform {
                         translation: Vec3::new(
                             0.,         // center
@@ -73,14 +73,17 @@ fn debug_colliders(
                             500.,
                         ),
                         scale: rel_scale,
-                        ..Default::default()
+                        ..default()
                     },
-                    sprite: Sprite::new(Vec2::new(collider.half.x * 2., 1.)),
-                    ..Default::default()
+                    sprite: Sprite {
+                        custom_size: Some(Vec2::new(collider.half.x * 2., 1.)),
+                        color: Color::rgba(1., 0., 0., 0.5),
+                        ..default()
+                    },
+                    ..default()
                 });
                 // bottom
-                parent.spawn_bundle(SpriteBundle {
-                    material: materials.collider_border.clone(),
+                parent.spawn(SpriteBundle {
                     transform: Transform {
                         translation: Vec3::new(
                             0.,          // center
@@ -88,14 +91,17 @@ fn debug_colliders(
                             500.,
                         ),
                         scale: rel_scale,
-                        ..Default::default()
+                        ..default()
                     },
-                    sprite: Sprite::new(Vec2::new(collider.half.x * 2., 1.)),
-                    ..Default::default()
+                    sprite: Sprite {
+                        custom_size: Some(Vec2::new(collider.half.x * 2., 1.)),
+                        color: Color::rgba(1., 0., 0., 0.5),
+                        ..default()
+                    },
+                    ..default()
                 });
                 // left
-                parent.spawn_bundle(SpriteBundle {
-                    material: materials.collider_border.clone(),
+                parent.spawn(SpriteBundle {
                     transform: Transform {
                         translation: Vec3::new(
                             -rel_half.x, // left
@@ -103,14 +109,17 @@ fn debug_colliders(
                             500.,
                         ),
                         scale: rel_scale,
-                        ..Default::default()
+                        ..default()
                     },
-                    sprite: Sprite::new(Vec2::new(1., collider.half.y * 2.)),
-                    ..Default::default()
+                    sprite: Sprite {
+                        custom_size: Some(Vec2::new(1., collider.half.y * 2.)),
+                        color: Color::rgba(1., 0., 0., 0.5),
+                        ..default()
+                    },
+                    ..default()
                 });
                 // right
-                parent.spawn_bundle(SpriteBundle {
-                    material: materials.collider_border.clone(),
+                parent.spawn(SpriteBundle {
                     transform: Transform {
                         translation: Vec3::new(
                             rel_half.x, // right
@@ -118,10 +127,14 @@ fn debug_colliders(
                             500.,
                         ),
                         scale: rel_scale,
-                        ..Default::default()
+                        ..default()
                     },
-                    sprite: Sprite::new(Vec2::new(1., collider.half.y * 2.)),
-                    ..Default::default()
+                    sprite: Sprite {
+                        custom_size: Some(Vec2::new(1., collider.half.y * 2.)),
+                        color: Color::rgba(1., 0., 0., 0.5),
+                        ..default()
+                    },
+                    ..default()
                 });
             });
     }
@@ -138,7 +151,7 @@ fn debug_colliders(
 //         let half_x = collider.half.x / 2.;
 //         commands.entity(entity).with_children(|parent| {
 //             // top
-//             parent.spawn_bundle(SpriteBundle {
+//             parent.spawn(SpriteBundle {
 //                 material: materials.collider_border.clone(),
 //                 transform: Transform::from_translation(Vec3::new(
 //                     // left
@@ -146,10 +159,10 @@ fn debug_colliders(
 //                     half_y, 500.,
 //                 )),
 //                 sprite: Sprite::new(Vec2::new(collider.half.x, 1.0)),
-//                 ..Default::default()
+//                 ..default()
 //             });
 //             // bottom
-//             parent.spawn_bundle(SpriteBundle {
+//             parent.spawn(SpriteBundle {
 //                 material: materials.collider_border.clone(),
 //                 transform: Transform::from_translation(Vec3::new(
 //                     // left
@@ -157,10 +170,10 @@ fn debug_colliders(
 //                     -half_y, 500.,
 //                 )),
 //                 sprite: Sprite::new(Vec2::new(collider.half.x, 1.0)),
-//                 ..Default::default()
+//                 ..default()
 //             });
 //             // left
-//             parent.spawn_bundle(SpriteBundle {
+//             parent.spawn(SpriteBundle {
 //                 material: materials.collider_border.clone(),
 //                 transform: Transform::from_translation(Vec3::new(
 //                     // left
@@ -168,10 +181,10 @@ fn debug_colliders(
 //                     0., 500.,
 //                 )),
 //                 sprite: Sprite::new(Vec2::new(1.0, collider.half.y)),
-//                 ..Default::default()
+//                 ..default()
 //             });
 //             // right
-//             parent.spawn_bundle(SpriteBundle {
+//             parent.spawn(SpriteBundle {
 //                 material: materials.collider_border.clone(),
 //                 transform: Transform::from_translation(Vec3::new(
 //                     // right
@@ -179,7 +192,7 @@ fn debug_colliders(
 //                     0., 500.,
 //                 )),
 //                 sprite: Sprite::new(Vec2::new(1.0, collider.half.y)),
-//                 ..Default::default()
+//                 ..default()
 //             });
 //         });
 //     }

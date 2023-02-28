@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    components::{Collider, Tile},
-    resources::Materials,
-};
+use crate::components::{Collider, Tile};
 
 use super::{
     events::tile_collision_listener,
@@ -14,15 +11,15 @@ use super::{
 pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         let map = build_default_map();
         app.insert_resource(map)
-            .add_startup_stage("map render", SystemStage::single(map_render.system()))
-            .add_system(tile_collision_listener.system());
+            .add_startup_stage("map render", SystemStage::single(map_render))
+            .add_system(tile_collision_listener);
     }
 }
 
-fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) {
+fn map_render(mut commands: Commands, map: Res<Map>, asset_server: Res<AssetServer>) {
     for (i, tile) in map
         .tiles
         .iter()
@@ -38,14 +35,15 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
             half_tile_size,
         ));
         let mut sprite_scale = 2.0;
-        let material = match &tile {
+
+        let texture = match &tile {
             TileType::Lava => {
                 sprite_scale = 1.0;
-                Some(materials.tile_lava_01.clone())
+                Some(asset_server.load("lava_01.png"))
             }
             TileType::Ladder => {
                 collider = None;
-                Some(materials.tile_ladder.clone())
+                Some(asset_server.load("ladder.png"))
             }
             TileType::Empty => None,
             TileType::Platform => {
@@ -59,7 +57,7 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
                     right: true,
                     bottom: false,
                 });
-                Some(materials.tile_edge.clone())
+                Some(asset_server.load("edge.png"))
             }
             TileType::Solid => {
                 collider = Some(Collider::from_position(
@@ -74,38 +72,37 @@ fn map_render(mut commands: Commands, map: Res<Map>, materials: Res<Materials>) 
                     if i as i32 % map.width != map.width - 1 as i32
                         && map.tiles[i + 1] == TileType::Solid
                     {
-                        Some(materials.tile_wall_middle.clone())
+                        Some(asset_server.load("wall_mid.png"))
                     } else {
-                        Some(materials.tile_wall_right.clone())
+                        Some(asset_server.load("wall_right.png"))
                     }
                 // previous tile was air or first tile in row
                 } else if (i - 1) / 32 != i / 32 || map.tiles[i - 1] != TileType::Solid {
                     // current tile is end of row
                     if i as i32 % map.width == map.width - 1 as i32 {
-                        Some(materials.tile_wall_middle.clone())
+                        Some(asset_server.load("wall_mid.png"))
                     // next tile is air
                     } else if map.tiles[i + 1] != TileType::Solid {
-                        Some(materials.tile_wall_middle.clone())
+                        Some(asset_server.load("wall_mid.png"))
                     } else {
-                        Some(materials.tile_wall_left.clone())
+                        Some(asset_server.load("wall_left.png"))
                     }
                 } else {
-                    Some(materials.tile_wall_middle.clone())
+                    Some(asset_server.load("wall_mid.png"))
                 }
             }
         };
 
-        let mut entity = commands.spawn();
-
-        entity.insert_bundle(SpriteBundle {
-            material: material.unwrap(),
+        let mut entity = commands.spawn(SpriteBundle {
+            texture: texture.unwrap(),
             transform: Transform {
                 translation: Vec3::new(pos.x, pos.y, 1.),
                 scale: Vec3::new(sprite_scale, sprite_scale, 1.),
-                ..Default::default()
+                ..default()
             },
-            ..Default::default()
+            ..default()
         });
+
         entity.insert(Tile);
 
         if let Some(c) = collider {
