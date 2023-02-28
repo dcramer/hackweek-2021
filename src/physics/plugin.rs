@@ -1,6 +1,7 @@
 // based on http://noonat.github.io/intersect/
 
-use bevy::{core::FixedTimestep, prelude::*};
+use bevy::math::Vec3Swizzles;
+use bevy::{prelude::*, time::FixedTimestep};
 
 // use crate::constants::PLATFORM_THRESHOLD;
 use crate::components::{Collider, RigidBody};
@@ -10,14 +11,13 @@ use super::events::CollisionEvent;
 pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_event::<CollisionEvent>().add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(1.0 / 60.))
-                .with_system(detect_collisions.system().label("detect collisions"))
+                .with_system(detect_collisions.label("detect collisions"))
                 .with_system(
                     apply_movements
-                        .system()
                         .label("apply movements")
                         .after("detect collisions"),
                 ),
@@ -34,7 +34,7 @@ fn detect_collisions(
     // first we need to compile a list of changes (compute all the movements and collisions)
     // then we will apply them
     for (entity, mut body, rb_collider) in rb_query.iter_mut() {
-        let delta = Vec2::from(body.speed * time.delta_seconds()).round();
+        let delta = (body.speed * time.delta_seconds()).xy().round();
 
         body.old_position = body.position;
         body.position.x += delta.x;

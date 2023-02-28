@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+#[derive(Resource)]
 pub struct CharacterAnimation {
     pub idle_f0: Handle<ColorMaterial>,
     pub idle_f1: Handle<ColorMaterial>,
@@ -12,6 +13,7 @@ pub struct CharacterAnimation {
     pub run_f3: Handle<ColorMaterial>,
 }
 
+#[derive(Resource)]
 pub struct Materials {
     pub red: Handle<ColorMaterial>,
     pub green: Handle<ColorMaterial>,
@@ -38,6 +40,7 @@ pub struct Materials {
     pub tile_lava_12: Handle<ColorMaterial>,
 }
 
+#[derive(Resource)]
 pub struct WinSize {
     #[allow(unused)]
     pub w: f32,

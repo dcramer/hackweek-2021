@@ -5,29 +5,31 @@ mod physics;
 mod player;
 mod resources;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, window::PresentMode};
 use map::MapPlugin;
 use physics::{DebugPhysicsPlugin, PhysicsPlugin};
 use player::PlayerPlugin;
 use resources::{CharacterAnimation, Materials, WinSize};
 
 fn main() {
-    App::build()
+    App::new()
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
-        .insert_resource(WindowDescriptor {
-            title: "Hackweek 2021".to_string(),
-            width: 1400.0,
-            height: 768.0,
-            vsync: true,
-            resizable: false,
-            ..Default::default()
-        })
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                title: "Hackweek 2021".to_string(),
+                width: 1400.0,
+                height: 768.0,
+                present_mode: PresentMode::Immediate,
+                resizable: false,
+                ..default()
+            },
+            ..default()
+        }))
         .add_plugin(PhysicsPlugin)
         .add_plugin(DebugPhysicsPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(MapPlugin)
-        .add_startup_system(setup.system())
+        .add_startup_system(setup)
         .run();
 }
 
@@ -38,11 +40,11 @@ fn setup(
     asset_server: Res<AssetServer>,
 ) {
     // camera
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn(Camera2dBundle::default());
 
     // position window
     let window = windows.get_primary_mut().unwrap();
-    window.set_position(IVec2::new(2000, 0));
+    window.set_position(MonitorSelection::Current, IVec2::new(2000, 0));
 
     commands.insert_resource(CharacterAnimation {
         idle_f0: materials.add(

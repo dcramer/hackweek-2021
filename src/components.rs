@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Component, Copy, Clone, PartialEq, Eq)]
 pub enum Direction {
     Left,
     Right,
@@ -19,6 +19,7 @@ impl Direction {
     }
 }
 
+#[derive(Component)]
 pub struct Player {
     pub facing: Direction,
     pub state: PlayerState,
@@ -26,6 +27,7 @@ pub struct Player {
     pub min_jump_speed: f32,
     pub jump_speed: f32,
 }
+
 impl Default for Player {
     fn default() -> Self {
         Self {
@@ -38,12 +40,14 @@ impl Default for Player {
     }
 }
 
+#[derive(Component)]
 pub enum PlayerState {
     Stand,
     Walk,
     Jump,
 }
 
+#[derive(Component)]
 pub struct PlayerReadyAttack(pub bool);
 
 #[derive(Bundle)]
@@ -65,6 +69,7 @@ impl Default for PlayerBundle {
     }
 }
 
+#[derive(Component)]
 pub struct RigidBody {
     pub old_position: Vec3,
     pub position: Vec3,
@@ -80,6 +85,7 @@ pub struct RigidBody {
     pub at_right_tile: bool,
     pub at_left_tile: bool,
 }
+
 impl Default for RigidBody {
     fn default() -> Self {
         Self {
@@ -102,12 +108,12 @@ impl RigidBody {
             old_position: transform.translation,
             position: transform.translation,
             scale: transform.scale,
-            ..Default::default()
+            ..default()
         }
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Component, Copy, Clone, Debug, PartialEq)]
 pub struct Collider {
     pub pos: Vec2,
     pub half: Vec2,
@@ -117,12 +123,13 @@ pub struct Collider {
     pub left: bool,
     pub right: bool,
 }
+
 impl Collider {
     pub fn new(pos: Vec2, half: Vec2) -> Self {
         Self {
             pos,
             half,
-            ..Default::default()
+            ..default()
         }
     }
 
@@ -148,7 +155,9 @@ impl Default for Collider {
     }
 }
 
+#[derive(Component)]
 pub struct Speed(pub Vec3);
+
 impl Default for Speed {
     fn default() -> Self {
         Self(Vec3::new(160.0, 160.0, 1.))
@@ -160,8 +169,10 @@ impl Speed {
     }
 }
 
+#[derive(Component)]
 pub struct Projectile {
     pub direction: Direction,
 }
 
+#[derive(Component)]
 pub struct Tile;
