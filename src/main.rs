@@ -21,6 +21,7 @@ fn main() {
                 height: 768.0,
                 present_mode: PresentMode::Immediate,
                 resizable: false,
+                position: WindowPosition::Centered,
                 ..default()
             },
             ..default()
@@ -41,10 +42,6 @@ fn setup(
 ) {
     // camera
     commands.spawn(Camera2dBundle::default());
-
-    // position window
-    let window = windows.get_primary_mut().unwrap();
-    window.set_position(MonitorSelection::Current, IVec2::new(2000, 0));
 
     commands.insert_resource(CharacterAnimation {
         idle_f0: materials.add(
@@ -118,6 +115,7 @@ fn setup(
         tile_lava_12: materials.add(asset_server.load("lava_12.png").into()),
     });
 
+    let window = windows.get_primary_mut().unwrap();
     commands.insert_resource(WinSize {
         w: window.width(),
         h: window.height(),
