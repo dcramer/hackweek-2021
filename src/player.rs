@@ -68,119 +68,118 @@ fn player_movement(
     time: Res<Time>,
     mut query: Query<(&Speed, &mut Player, &mut RigidBody, With<Player>)>,
 ) {
-    if let (speed, mut player, mut rigidbody, _) = query.single_mut() {
-        match player.state {
-            PlayerState::Stand => {
-                rigidbody.speed = Vec3::ZERO;
+    let (speed, mut player, mut rigidbody, _) = query.single_mut();
+    match player.state {
+        PlayerState::Stand => {
+            rigidbody.speed = Vec3::ZERO;
 
-                if !rigidbody.on_ground {
-                    player.state = PlayerState::Jump;
-                    return;
-                }
+            if !rigidbody.on_ground {
+                player.state = PlayerState::Jump;
+                return;
+            }
 
-                // if left or right pressed, not both
-                if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
-                    != (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
-                {
-                    player.state = PlayerState::Walk;
-                    return;
-                // if jump pressed
-                } else if kb.pressed(KeyCode::Space) && !rigidbody.at_ceiling {
-                    rigidbody.speed.y = player.jump_speed;
-                    player.state = PlayerState::Jump;
-                // if drop pressed
-                } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
-                    if rigidbody.on_platform {
-                        rigidbody.position.y -= PLATFORM_THRESHOLD;
-                    }
+            // if left or right pressed, not both
+            if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
+                != (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
+            {
+                player.state = PlayerState::Walk;
+                return;
+            // if jump pressed
+            } else if kb.pressed(KeyCode::Space) && !rigidbody.at_ceiling {
+                rigidbody.speed.y = player.jump_speed;
+                player.state = PlayerState::Jump;
+            // if drop pressed
+            } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
+                if rigidbody.on_platform {
+                    rigidbody.position.y -= PLATFORM_THRESHOLD;
                 }
             }
-            PlayerState::Walk => {
-                // if both left and right pressed, or no keys pressed, stop
+        }
+        PlayerState::Walk => {
+            // if both left and right pressed, or no keys pressed, stop
+            if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
+                == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
+            {
+                player.state = PlayerState::Stand;
+                rigidbody.speed = Vec3::ZERO;
+            // go right
+            } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
+                if rigidbody.at_right_tile {
+                    rigidbody.speed.x = 0.;
+                } else {
+                    rigidbody.speed.x = speed.0.x;
+                }
+                rigidbody.scale.x = rigidbody.scale.x.abs();
+                player.facing = Direction::Right;
+            // go left
+            } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
+                if rigidbody.at_left_tile {
+                    rigidbody.speed.x = 0.;
+                } else {
+                    rigidbody.speed.x = -speed.0.x;
+                }
+                rigidbody.scale.x = -rigidbody.scale.x.abs();
+                player.facing = Direction::Left;
+            // if drop pressed
+            } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
+                if rigidbody.on_platform {
+                    rigidbody.position.y -= PLATFORM_THRESHOLD;
+                }
+            }
+            // if theres no tile to walk on, fall
+            if kb.pressed(KeyCode::Space) && !rigidbody.at_ceiling {
+                rigidbody.speed.y = player.jump_speed;
+                player.state = PlayerState::Jump;
+            } else if !rigidbody.on_ground {
+                player.state = PlayerState::Jump;
+            }
+        }
+        PlayerState::Jump => {
+            rigidbody.speed.y += GRAVITY * time.delta_seconds();
+            if rigidbody.speed.y < MAX_FALLING_SPEED {
+                rigidbody.speed.y = MAX_FALLING_SPEED;
+            }
+
+            if rigidbody.at_ceiling || (!kb.pressed(KeyCode::Space) && rigidbody.speed.y > 0.) {
+                if rigidbody.speed.y > player.min_jump_speed {
+                    rigidbody.speed.y = player.min_jump_speed;
+                }
+            }
+
+            // stop moving
+            if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
+                == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
+            {
+                rigidbody.speed.x = 0.;
+            // go right
+            } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
+                if rigidbody.at_right_tile {
+                    rigidbody.speed.x = 0.;
+                } else {
+                    rigidbody.speed.x = speed.0.x;
+                }
+                rigidbody.scale.x = rigidbody.scale.x.abs();
+                player.facing = Direction::Right;
+            // go left
+            } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
+                if rigidbody.at_left_tile {
+                    rigidbody.speed.x = 0.;
+                } else {
+                    rigidbody.speed.x = -speed.0.x;
+                }
+                rigidbody.scale.x = -rigidbody.scale.x.abs();
+                player.facing = Direction::Left;
+            }
+
+            if rigidbody.on_ground {
                 if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
                     == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
                 {
                     player.state = PlayerState::Stand;
                     rigidbody.speed = Vec3::ZERO;
-                // go right
-                } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
-                    if rigidbody.at_right_tile {
-                        rigidbody.speed.x = 0.;
-                    } else {
-                        rigidbody.speed.x = speed.0.x;
-                    }
-                    rigidbody.scale.x = rigidbody.scale.x.abs();
-                    player.facing = Direction::Right;
-                // go left
-                } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
-                    if rigidbody.at_left_tile {
-                        rigidbody.speed.x = 0.;
-                    } else {
-                        rigidbody.speed.x = -speed.0.x;
-                    }
-                    rigidbody.scale.x = -rigidbody.scale.x.abs();
-                    player.facing = Direction::Left;
-                // if drop pressed
-                } else if kb.pressed(KeyCode::Down) || kb.pressed(KeyCode::S) {
-                    if rigidbody.on_platform {
-                        rigidbody.position.y -= PLATFORM_THRESHOLD;
-                    }
-                }
-                // if theres no tile to walk on, fall
-                if kb.pressed(KeyCode::Space) && !rigidbody.at_ceiling {
-                    rigidbody.speed.y = player.jump_speed;
-                    player.state = PlayerState::Jump;
-                } else if !rigidbody.on_ground {
-                    player.state = PlayerState::Jump;
-                }
-            }
-            PlayerState::Jump => {
-                rigidbody.speed.y += GRAVITY * time.delta_seconds();
-                if rigidbody.speed.y < MAX_FALLING_SPEED {
-                    rigidbody.speed.y = MAX_FALLING_SPEED;
-                }
-
-                if rigidbody.at_ceiling || (!kb.pressed(KeyCode::Space) && rigidbody.speed.y > 0.) {
-                    if rigidbody.speed.y > player.min_jump_speed {
-                        rigidbody.speed.y = player.min_jump_speed;
-                    }
-                }
-
-                // stop moving
-                if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
-                    == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
-                {
-                    rigidbody.speed.x = 0.;
-                // go right
-                } else if kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D) {
-                    if rigidbody.at_right_tile {
-                        rigidbody.speed.x = 0.;
-                    } else {
-                        rigidbody.speed.x = speed.0.x;
-                    }
-                    rigidbody.scale.x = rigidbody.scale.x.abs();
-                    player.facing = Direction::Right;
-                // go left
-                } else if kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A) {
-                    if rigidbody.at_left_tile {
-                        rigidbody.speed.x = 0.;
-                    } else {
-                        rigidbody.speed.x = -speed.0.x;
-                    }
-                    rigidbody.scale.x = -rigidbody.scale.x.abs();
-                    player.facing = Direction::Left;
-                }
-
-                if rigidbody.on_ground {
-                    if (kb.pressed(KeyCode::Left) || kb.pressed(KeyCode::A))
-                        == (kb.pressed(KeyCode::Right) || kb.pressed(KeyCode::D))
-                    {
-                        player.state = PlayerState::Stand;
-                        rigidbody.speed = Vec3::ZERO;
-                    } else {
-                        player.state = PlayerState::Walk;
-                        rigidbody.speed.y = 0.;
-                    }
+                } else {
+                    player.state = PlayerState::Walk;
+                    rigidbody.speed.y = 0.;
                 }
             }
         }
@@ -193,35 +192,34 @@ fn player_attack(
     mut query: Query<(&Transform, &mut PlayerReadyAttack, &Player, With<Player>)>,
     asset_server: Res<AssetServer>,
 ) {
-    if let (player_tf, mut ready_attack, player, _) = query.single_mut() {
-        if ready_attack.0 && kb.pressed(KeyCode::Return) {
-            let x = player_tf.translation.x;
-            let y = player_tf.translation.y;
-            commands
-                .spawn(SpriteBundle {
-                    texture: asset_server.load("bullet.png"),
-                    transform: Transform {
-                        translation: Vec3::new(x, y, 1.),
-                        scale: Vec3::new(
-                            if player.facing == Direction::Right {
-                                -1.
-                            } else {
-                                1.
-                            } * SPRITE_SCALE
-                                / 2.0,
-                            SPRITE_SCALE / 2.0,
-                            1.,
-                        ),
-                        ..default()
-                    },
+    let (player_tf, mut ready_attack, player, _) = query.single_mut();
+    if ready_attack.0 && kb.pressed(KeyCode::Return) {
+        let x = player_tf.translation.x;
+        let y = player_tf.translation.y;
+        commands
+            .spawn(SpriteBundle {
+                texture: asset_server.load("bullet.png"),
+                transform: Transform {
+                    translation: Vec3::new(x, y, 1.),
+                    scale: Vec3::new(
+                        if player.facing == Direction::Right {
+                            -1.
+                        } else {
+                            1.
+                        } * SPRITE_SCALE
+                            / 2.0,
+                        SPRITE_SCALE / 2.0,
+                        1.,
+                    ),
                     ..default()
-                })
-                .insert(Projectile {
-                    direction: player.facing,
-                })
-                .insert(Speed::new(1000., 1000.));
-            ready_attack.0 = false;
-        }
+                },
+                ..default()
+            })
+            .insert(Projectile {
+                direction: player.facing,
+            })
+            .insert(Speed::new(1000., 1000.));
+        ready_attack.0 = false;
 
         if kb.just_released(KeyCode::Return) {
             ready_attack.0 = true;

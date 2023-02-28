@@ -11,4 +11,4 @@ bevy = "0.9.1"
 rand = "0.7.2"
 
 [profile.dev]
-opt-level = 1
+opt-level = 3

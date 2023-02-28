@@ -42,7 +42,6 @@ fn setup_debugger(mut commands: Commands, mut materials: ResMut<Assets<ColorMate
 // 2. the scale is wrong due to parent/child (its inferring scale)
 fn debug_colliders(
     mut commands: Commands,
-    materials: Res<ColliderMaterials>,
     mut query: Query<(Entity, &Transform, &Collider, Without<HasDebugCollider>)>,
 ) {
     for (entity, transform, collider, _) in query.iter_mut() {
